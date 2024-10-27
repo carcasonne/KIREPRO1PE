@@ -1,0 +1,14 @@
+{
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always",
+        "source.sortImports": "always",
+        "source.fixAll": "always"
+    }
+  },
+  "ruff.lint.run": "onSave",
+  "ruff.format.args": [
+    "--line-length=100"
+  ], // bc 79 chars is boomer energy
+}
