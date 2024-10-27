@@ -1,4 +1,5 @@
 Document for things that are not specified in the paper
 
 Unclear if they use padding on their convolutions or not
-Also not sure how they get 512 as their fully connected layer, when they only use 4 stacks of convolutions
+Also not sure how they get 512 as their fully connected layer, when they only use 4 stacks of convolutions #Mby er jeg bare dum her
+How to make files 5 sec
