@@ -2,13 +2,11 @@ from torch import nn
 
 
 class CNNClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, no_channels: int):
         super(CNNClassifier, self).__init__()
-
-        CHANNELS = 3
-
+        self._channels = no_channels
         self.conv = nn.Sequential(
-            nn.Conv2d(CHANNELS, 32, kernel_size=2),
+            nn.Conv2d(self._channels, 32, kernel_size=2),
             nn.MaxPool2d(2),
             nn.ReLU(),
 
