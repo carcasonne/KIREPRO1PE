@@ -1,0 +1,13 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "ruff.lint.run": "onSave",
+  "ruff.format.args": [
+    "--line-length=100"
+  ], // bc 79 chars is boomer energy
+}
