@@ -1,9 +1,9 @@
 from torchvision import transforms
 
-from ClonedAudioDetector import CNNClassifier
+from Application.ClonedAudioDetector import CNNClassifier
+from Application.DataProcessor import DataProcessor
+from Application.DataSource import DataType, LocalDataSource
 from config import *
-from DataProcessor import DataProcessor
-from DataSource import DataType, LocalDataSource
 
 transform_normalization = transforms.Compose(
     [transforms.ToTensor(), transforms.Normalize(mean=[0.5], std=[0.5])]

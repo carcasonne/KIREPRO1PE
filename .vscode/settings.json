@@ -1,9 +1,10 @@
 {
   "[python]": {
-    "editor.defaultFormatter": "ms-python.autopep8",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
+        "source.organizeImports": "always",
+        "source.sortImports": "always",
+        "source.fixAll": "always"
     }
   },
   "ruff.lint.run": "onSave",
