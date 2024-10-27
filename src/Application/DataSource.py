@@ -3,14 +3,33 @@ from enum import Enum
 
 import librosa
 import numpy as np
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
+from Application.AudioDataLoader import AudioDataLoader
 from Core.DataType import DataType
 
 
 class AudioLabel(Enum):
     FAKE = 0
     REAL = 1
+
+
+class LocalDataSource:
+    def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
+        self.root_dir = root_dir
+        self.sample_rate = sample_rate
+        self.audio_duration_seconds = audio_duration_seconds
+        self.transform = transform
+
+    def get_data_loader(self, subset: DataType, batch_size: int, shuffle: bool) -> AudioDataLoader:
+        data = AudioData(
+            root_dir=self.root_dir,
+            transform=self.transform,
+            sample_rate=self.sample_rate,
+            subset=subset,
+            audio_duration_seconds=self.audio_duration_seconds,
+        )
+        return AudioDataLoader(data, batch_size, shuffle)
 
 
 class AudioData(Dataset):
@@ -49,21 +68,3 @@ class AudioData(Dataset):
         audio, _ = librosa.load(filepath, sr=self.sample_rate, duration=self.audio_duration_seconds)
         spec = librosa.stft(audio)
         return librosa.amplitude_to_db(np.abs(spec), ref=np.max)
-
-
-class LocalDataSource:
-    def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
-        self.root_dir = root_dir
-        self.sample_rate = sample_rate
-        self.audio_duration_seconds = audio_duration_seconds
-        self.transform = transform
-
-    def get_data_loader(self, subset: DataType, batch_size: int, shuffle: bool) -> AudioData:
-        data = AudioData(
-            root_dir=self.root_dir,
-            transform=self.transform,
-            sample_rate=self.sample_rate,
-            subset=subset,
-            audio_duration_seconds=self.audio_duration_seconds,
-        )
-        return DataLoader(data, batch_size, shuffle)
