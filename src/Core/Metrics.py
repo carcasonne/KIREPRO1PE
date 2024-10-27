@@ -3,6 +3,7 @@ from enum import Enum, auto
 from typing import Dict
 
 
+# Here define all the metrics we care about
 class MetricType(Enum):
     ABSOLUTE_LOSS = auto()
     AVERAGE_LOSS = auto()
@@ -20,10 +21,3 @@ class EpochMetrics:
 
     def get_metric(self, metric_type: MetricType) -> float:
         return self.metrics.get(metric_type, 0.0)
-
-
-@dataclass
-class Results:
-    training: list[EpochMetrics] = field(default_factory=list)
-    validation: list[EpochMetrics] = field(default_factory=list)
-    testing: list[EpochMetrics] = field(default_factory=list)

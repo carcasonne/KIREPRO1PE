@@ -13,24 +13,6 @@ class AudioLabel(Enum):
     REAL = 1
 
 
-class LocalDataSource:
-    def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
-        self.root_dir = root_dir
-        self.sample_rate = sample_rate
-        self.audio_duration_seconds = audio_duration_seconds
-        self.transform = transform
-
-    def get_data_loader(self, subset: DataType, batch_size: int, shuffle: bool):
-        data = AudioData(
-            root_dir=self.root_dir,
-            transform=self.transform,
-            sample_rate=self.sample_rate,
-            subset=subset,
-            audio_duration_seconds=self.audio_duration_seconds,
-        )
-        return DataLoader(data, batch_size, shuffle)
-
-
 class AudioData(Dataset):
     def __init__(
         self,
@@ -67,3 +49,21 @@ class AudioData(Dataset):
         audio, _ = librosa.load(filepath, sr=self.sample_rate, duration=self.audio_duration_seconds)
         spec = librosa.stft(audio)
         return librosa.amplitude_to_db(np.abs(spec), ref=np.max)
+
+
+class LocalDataSource:
+    def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
+        self.root_dir = root_dir
+        self.sample_rate = sample_rate
+        self.audio_duration_seconds = audio_duration_seconds
+        self.transform = transform
+
+    def get_data_loader(self, subset: DataType, batch_size: int, shuffle: bool) -> AudioData:
+        data = AudioData(
+            root_dir=self.root_dir,
+            transform=self.transform,
+            sample_rate=self.sample_rate,
+            subset=subset,
+            audio_duration_seconds=self.audio_duration_seconds,
+        )
+        return DataLoader(data, batch_size, shuffle)

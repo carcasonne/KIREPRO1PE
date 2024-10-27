@@ -1,2 +1,2 @@
 [tool.ruff]
-ignore = ["F403", "F405"]  # shut up about wildcards nerd
+ignore = ["F403", "F405", "E501"]  # shut up about wildcards nerd
