@@ -60,7 +60,7 @@ class DataProcessor:
             for images, labels in training_data_loader:
                 images, labels = images.to(device), labels.to(device)
                 optimizer.zero_grad()
-                print(f"Shape of input images: {images.shape}")
+                # print(images.shape)
                 outputs = model(images)
                 loss = criterion(outputs, labels)
                 loss.backward()

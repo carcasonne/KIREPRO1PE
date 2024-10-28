@@ -1,7 +1,35 @@
-SAMPLE_RATE = 16000
-IMG_HEIGHT, IMG_WIDTH, CHANNELS = 625, 469, 3  # Image Dimensions used in the paper
-DURATION = 1
-BATCH_SIZE = 32
-EPOCHS = 10
-SHUFFLE = False
-DATA_PATH = "../audio_files_samples"
+from dataclasses import dataclass
+from typing import List, Optional
+
+
+@dataclass
+class AudioClassifierConfig:
+    # core training params
+    learning_rate: float
+    batch_size: int
+    shuffle_batches: bool
+    epochs: int
+    optimizer: str
+
+    # model architecture
+    model_name: str
+    hidden_dims: List[int]
+    activation: str
+
+    # classifier data specs
+    sample_rate: int
+    img_height: int
+    img_width: int
+    channels: int
+    duration: int
+
+    # misc
+    data_path: str
+    output_path: str
+    run_coda: bool
+    notes: str = ""
+    torch_seed: Optional[int] = None
+
+    # regularization
+    dropout: float = 0.0
+    weight_decay: float = 0.0
