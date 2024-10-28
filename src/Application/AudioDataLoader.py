@@ -14,8 +14,3 @@ class AudioDataLoader(DataLoader, Generic[T, L]):
         specs, labels = batch
         idx = random.randint(0, len(specs) - 1)
         return (specs[idx], labels[idx]) if get_label else specs[idx]
-
-
-# Core/data.py
-def create_dataloader(dataset, **kwargs) -> AudioDataLoader:
-    return AudioDataLoader(dataset, **kwargs)

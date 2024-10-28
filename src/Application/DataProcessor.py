@@ -7,8 +7,7 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 from Application.ClonedAudioDetector import CNNClassifier
-from Application.Results import Results
-from Core.Metrics import EpochMetrics, MetricType
+from Core.Metrics import EpochMetrics, MetricType, Results
 
 CType = TypeVar("CType", bound=TorchLoss)
 OType = TypeVar("OType", bound=Optimizer)
@@ -61,7 +60,7 @@ class DataProcessor:
             for images, labels in training_data_loader:
                 images, labels = images.to(device), labels.to(device)
                 optimizer.zero_grad()
-                # print(images.shape)
+                print(f"Shape of input images: {images.shape}")
                 outputs = model(images)
                 loss = criterion(outputs, labels)
                 loss.backward()
