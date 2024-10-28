@@ -1,0 +1,138 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Training Run 20241029_000532</title>
+            <style>
+                body {
+                    font-family: -apple-system, system-ui, BlinkMacSystemFont;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background: #fafafa;
+                }
+                .card {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .metric-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 20px;
+                }
+                img {
+                    max-width: 100%;
+                    height: auto;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                th, td {
+                    padding: 8px;
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                }
+                .phase-header {
+                    color: #666;
+                    font-size: 1.2em;
+                    margin-top: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h1>Training Run 20241029_000532</h1>
+                <p>Generated on 2024-10-29 00:08:26</p>
+            </div>
+
+            <div class="card">
+                <h2>Run Configuration</h2>
+                <table>
+                    <tr><th colspan="2">Training Parameters</th></tr>
+                    <tr><td>Learning Rate</td><td>0.001</td></tr>
+                    <tr><td>Batch Size</td><td>16</td></tr>
+                    <tr><td>Batches Shuffled</td><td>False</td></tr>
+                    <tr><td>Epochs</td><td>20</td></tr>
+                    <tr><td>Optimizer</td><td>Adadelta</td></tr>
+                    <tr><td>Torch Seed</td><td>None</td></tr>
+                    
+                    <tr><th colspan="2">Model Architecture</th></tr>
+                    <tr><td>Model</td><td>CNN Classifier from Paper</td></tr>
+                    <tr><td>Hidden Dims</td><td>placeholder</td></tr>
+                    <tr><td>Activation</td><td>placeholder</td></tr>
+                    
+                    <tr><th colspan="2">Regularization</th></tr>
+                    <tr><td>Dropout</td><td>placeholder</td></tr>
+                    <tr><td>Weight Decay</td><td>placeholder</td></tr>
+
+                    <tr><th colspan="2">Data Specifications</th></tr>
+                    <tr><td>Audio Sample Rate</td><td>16000</td></tr>
+                    <tr><td>Audio Duration</td><td>1</td></tr>
+                    <tr><td>Spectogram Image Height</td><td>625</td></tr>
+                    <tr><td>Spectogram Image Width</td><td>469</td></tr>
+                    <tr><td>Spectogram Image Channels</td><td>3</td></tr>
+                    
+                    <tr><th colspan="2">System Info</th></tr>
+                    <tr><td>Device</td><td>NVIDIA GeForce RTX 3070</td></tr><tr><td>Cuda Version</td><td>12.4</td></tr><tr><td>Torch Version</td><td>2.5.0+cu124</td></tr><tr><td>Ram</td><td>31.1GB</td></tr><tr><td>Platform</td><td>Linux-6.11.5-arch1-1-x86_64-with-glibc2.40</td></tr><tr><td>Python Version</td><td>3.12.7</td></tr>
+                </table>
+                
+                <div class="notes"><h3>Notes</h3><p>This data report is not fully complete, and is work in progress</p></div>
+            </div>
+        <div class="card"><h2>Training Metrics</h2><div class="metric-grid">
+                <div>
+                    <h3>Absolute Loss</h3>
+                    <img src="plots/absolute_loss.png" alt="ABSOLUTE_LOSS">
+                </div>
+            
+                <div>
+                    <h3>Average Loss</h3>
+                    <img src="plots/average_loss.png" alt="AVERAGE_LOSS">
+                </div>
+            
+                <div>
+                    <h3>Accuracy</h3>
+                    <img src="plots/accuracy.png" alt="ACCURACY">
+                </div>
+            </div></div><div class="card"><h2>Final Metrics</h2>
+                    <h3 class="phase-header">Training Results</h3>
+                    <table>
+                        <tr><th>Metric</th><th>Final Value</th></tr>
+                
+                        <tr>
+                            <td>Absolute Loss</td>
+                            <td>27.8184</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Average Loss</td>
+                            <td>0.6955</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>0.5000</td>
+                        </tr>
+                    </table>
+                    <h3 class="phase-header">Validation Results</h3>
+                    <table>
+                        <tr><th>Metric</th><th>Final Value</th></tr>
+                
+                        <tr>
+                            <td>Absolute Loss</td>
+                            <td>27.7507</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Average Loss</td>
+                            <td>0.6938</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>0.5000</td>
+                        </tr>
+                    </table></div></body></html>
