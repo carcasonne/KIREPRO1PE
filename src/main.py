@@ -10,9 +10,9 @@ from Core.ResultsDashboardGenerator import TrainingReporter
 config = AudioClassifierConfig(
     # core params
     learning_rate=1e-3,
-    batch_size=32,
+    batch_size=16,
     shuffle_batches=False,
-    epochs=2,
+    epochs=20,
     optimizer="Adadelta",
     torch_seed=None,
     # model arch
@@ -29,10 +29,10 @@ config = AudioClassifierConfig(
     channels=3,
     duration=1,
     # misc
-    notes="testing hypothesis about attention patterns",
+    notes="This data report is not fully complete, and is work in progress",
     data_path="../audio_files_samples",
     output_path="../output",
-    run_coda=True,
+    run_cuda=True,
 )
 
 transform_normalization = transforms.Compose(
@@ -57,11 +57,13 @@ testing_data = data_source.get_data_loader(
 classifier = CNNClassifier(no_channels=config.channels)
 
 # Define data pipeline
-data_processor = DataProcessor(classifier, config.run_coda)
+data_processor = DataProcessor(classifier, config.run_cuda)
 reporter = TrainingReporter(config=config, base_dir="../training_runs")
 
 # Process data
-test = data_processor.process(training_data, validation_data, config.epochs)
+results = data_processor.process(
+    training_data, validation_data, config.epochs, config.learning_rate
+)
 
 # Interpret data
 report_path = reporter.generate_report(results)

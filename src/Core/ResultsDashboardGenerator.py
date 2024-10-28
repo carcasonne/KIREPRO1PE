@@ -1,36 +1,14 @@
 import os
 import platform
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import psutil
 import torch
 
+from config import AudioClassifierConfig
 from Core.Metrics import MetricType, Results
-
-
-@dataclass
-class ExperimentConfig:
-    # core training params
-    learning_rate: float
-    batch_size: int
-    epochs: int
-    optimizer: str
-
-    # model architecture
-    model_name: str
-    hidden_dims: List[int]
-    activation: str
-
-    # regularization
-    dropout: float = 0.0
-    weight_decay: float = 0.0
-
-    # misc
-    random_seed: Optional[int] = None
-    notes: str = ""
 
 
 class MetricPlotter:
@@ -50,7 +28,7 @@ class MetricPlotter:
 
 
 class TrainingReporter:
-    def __init__(self, config: ExperimentConfig, base_dir: str = "training_runs"):
+    def __init__(self, config: AudioClassifierConfig, base_dir: str = "training_runs"):
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.run_dir = os.path.join(base_dir, self.timestamp)
         self.plot_dir = os.path.join(self.run_dir, "plots")
@@ -84,7 +62,6 @@ class TrainingReporter:
                 continue
 
             plt.figure(figsize=(10, 6))
-
             for phase, data in metric_data.items():
                 if len(data) > 0:  # only plot if we have data
                     plt.plot(
@@ -163,7 +140,7 @@ class TrainingReporter:
             </div>
 
             <div class="card">
-                <h2>Experiment Configuration</h2>
+                <h2>Run Configuration</h2>
                 <table>
                     <tr><th colspan="2">Training Parameters</th></tr>
                     <tr><td>Learning Rate</td><td>{self.config.learning_rate}</td></tr>
@@ -175,12 +152,12 @@ class TrainingReporter:
                     
                     <tr><th colspan="2">Model Architecture</th></tr>
                     <tr><td>Model</td><td>{self.config.model_name}</td></tr>
-                    <tr><td>Hidden Dims</td><td>{self.config.hidden_dims}</td></tr>
-                    <tr><td>Activation</td><td>{self.config.activation}</td></tr>
+                    <tr><td>Hidden Dims</td><td>{"placeholder"}</td></tr>
+                    <tr><td>Activation</td><td>{"placeholder"}</td></tr>
                     
                     <tr><th colspan="2">Regularization</th></tr>
-                    <tr><td>Dropout</td><td>{self.config.dropout}</td></tr>
-                    <tr><td>Weight Decay</td><td>{self.config.weight_decay}</td></tr>
+                    <tr><td>Dropout</td><td>{"placeholder"}</td></tr>
+                    <tr><td>Weight Decay</td><td>{"placeholder"}</td></tr>
 
                     <tr><th colspan="2">Data Specifications</th></tr>
                     <tr><td>Audio Sample Rate</td><td>{self.config.sample_rate}</td></tr>

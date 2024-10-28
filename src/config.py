@@ -26,7 +26,7 @@ class AudioClassifierConfig:
     # misc
     data_path: str
     output_path: str
-    run_coda: bool
+    run_cuda: bool
     notes: str = ""
     torch_seed: Optional[int] = None
 

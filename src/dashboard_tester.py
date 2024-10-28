@@ -24,7 +24,7 @@ config = AudioClassifierConfig(
     channels=3,
     duration=1,
     # misc
-    notes="testing hypothesis about attention patterns",
+    notes="This is a mock report. All plot data is randomly generated, and config values have no effect",
     data_path="../audio_files_samples",
     output_path="../output",
     run_coda=True,
