@@ -15,13 +15,12 @@ transform_normalization = transforms.Compose(
 # Load data
 data_source = LocalDataSource(DATA_PATH, SAMPLE_RATE, DURATION, transform_normalization)
 training_data = data_source.get_data_loader(DataType.TRAINING, BATCH_SIZE, SHUFFLE)
-validation_data = data_source.get_data_loader(DataType.TRAINING, BATCH_SIZE, SHUFFLE)
-testing_data = data_source.get_data_loader(DataType.TRAINING, BATCH_SIZE, SHUFFLE)
+validation_data = data_source.get_data_loader(DataType.VALIDATION, BATCH_SIZE, SHUFFLE)
+testing_data = data_source.get_data_loader(DataType.TESTING, BATCH_SIZE, SHUFFLE)
 
 # Define our classifier network
-classifier = CNNClassifier(no_channels=3)
+classifier = CNNClassifier(no_channels=1)
 
-# Define data processing pipeline
 data_processor = DataProcessor(classifier, True)
 
 test = data_processor.process(training_data, validation_data, 5)
