@@ -26,7 +26,7 @@ class CNNClassifier(nn.Module):
         )
 
         self.fc = nn.Sequential(
-            nn.Linear(256, 512),
+            nn.Linear(324864, 512),
             nn.ReLU(),
 
             nn.Linear(512, 2),

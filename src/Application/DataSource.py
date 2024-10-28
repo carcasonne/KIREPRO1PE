@@ -3,7 +3,11 @@ from enum import Enum
 
 import librosa
 import numpy as np
+from matplotlib.pyplot import viridis
 from torch.utils.data import DataLoader, Dataset
+import matplotlib.pyplot as plt
+from io import BytesIO
+from PIL import Image
 
 from Core.DataType import DataType
 
@@ -40,15 +44,42 @@ class AudioData(Dataset):
     def __getitem__(self, idx):
         file_path, label = self.files[idx]
         spec = self.convert_to_spectrogram(file_path)
+        img = self.spectrogram_to_rgb(spec)
         # shit doesnt normalize yet
         # if self.transform:
         #     spec = self.transform(spec)
-        return spec, label
+        return img, label
 
     def convert_to_spectrogram(self, filepath):
         audio, _ = librosa.load(filepath, sr=self.sample_rate, duration=self.audio_duration_seconds)
         spec = librosa.stft(audio)
         return librosa.amplitude_to_db(np.abs(spec), ref=np.max)
+
+    # Converts the spectrogram to an image
+    # TODO: Clean this up a little.
+    # TODO: Also have to consider the fact that using librosa to display the spectrogram
+    # TODO: gives a different 'image' than when using matplotlib, write in report at least
+    def spectrogram_to_rgb(self, spectrogram):
+        fig, ax = plt.subplots(figsize=(10, 6))
+        librosa.display.specshow(spectrogram, sr=self.sample_rate, x_axis='time', y_axis='log', cmap='viridis')
+        plt.axis('off')
+
+        # Save the plot to a BytesIO object
+        buf = BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+
+        # Load the image from the buffer and convert to an RGB array
+        buf.seek(0)
+        image = Image.open(buf).convert('RGB')
+        rgb_array = np.array(image)
+        buf.close()
+
+        # Have to convert from uint8 to float32 and then normalize
+        rgb_image_array_float = rgb_array.astype(np.float32) / 255.0
+        # Swaps the dimensions from 462, 775, 3 to 3, 462, 775
+        rgb_image_array_transposed = np.transpose(rgb_image_array_float, (2, 0, 1))
+        return rgb_image_array_transposed
 
 
 class LocalDataSource:
