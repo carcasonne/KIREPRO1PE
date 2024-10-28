@@ -18,12 +18,14 @@ class DataProcessor:
         self.model = model
         self.use_cuda = use_cuda
 
-    def process(self, training_data: DataLoader, validation_data: DataLoader, n_epochs) -> Results:
+    def process(
+        self, training_data: DataLoader, validation_data: DataLoader, n_epochs, learning_rate
+    ) -> Results:
         """processes the data by training the cnnclassifier with it
         this WILL affect the model associated with this DataProcessor
         return results from training"""
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adadelta(self.model.parameters())
+        optimizer = torch.optim.Adadelta(self.model.parameters(), lr=learning_rate)
         return self.train_model(
             self.model,
             training_data,
@@ -49,6 +51,7 @@ class DataProcessor:
         if use_cuda_if_available and torch.cuda.is_available():
             device = "cuda"
 
+        model.to(device)
         results = Results()
 
         for epoch in range(n_epochs):
@@ -60,7 +63,7 @@ class DataProcessor:
             for images, labels in training_data_loader:
                 images, labels = images.to(device), labels.to(device)
                 optimizer.zero_grad()
-                print(f"Shape of input images: {images.shape}")
+                # print(images.shape)
                 outputs = model(images)
                 loss = criterion(outputs, labels)
                 loss.backward()

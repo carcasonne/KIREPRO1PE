@@ -1,43 +1,19 @@
 import os
 from enum import Enum
+from io import BytesIO
 
 import librosa
-import numpy as np
-
-from torch.utils.data import Dataset
-
-from matplotlib.pyplot import viridis
-from torch.utils.data import DataLoader, Dataset
 import matplotlib.pyplot as plt
-from io import BytesIO
+import numpy as np
 from PIL import Image
+from torch.utils.data import DataLoader, Dataset
 
-
-from Application.AudioDataLoader import AudioDataLoader
 from Core.DataType import DataType
 
 
 class AudioLabel(Enum):
     FAKE = 0
     REAL = 1
-
-
-class LocalDataSource:
-    def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
-        self.root_dir = root_dir
-        self.sample_rate = sample_rate
-        self.audio_duration_seconds = audio_duration_seconds
-        self.transform = transform
-
-    def get_data_loader(self, subset: DataType, batch_size: int, shuffle: bool) -> AudioDataLoader:
-        data = AudioData(
-            root_dir=self.root_dir,
-            transform=self.transform,
-            sample_rate=self.sample_rate,
-            subset=subset,
-            audio_duration_seconds=self.audio_duration_seconds,
-        )
-        return AudioDataLoader(data, batch_size, shuffle)
 
 
 class AudioData(Dataset):
@@ -84,17 +60,19 @@ class AudioData(Dataset):
     # TODO: gives a different 'image' than when using matplotlib, write in report at least
     def spectrogram_to_rgb(self, spectrogram):
         fig, ax = plt.subplots(figsize=(10, 6))
-        librosa.display.specshow(spectrogram, sr=self.sample_rate, x_axis='time', y_axis='log', cmap='viridis')
-        plt.axis('off')
+        librosa.display.specshow(
+            spectrogram, sr=self.sample_rate, x_axis="time", y_axis="log", cmap="viridis"
+        )
+        plt.axis("off")
 
         # Save the plot to a BytesIO object
         buf = BytesIO()
-        fig.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
+        fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
         plt.close(fig)
 
         # Load the image from the buffer and convert to an RGB array
         buf.seek(0)
-        image = Image.open(buf).convert('RGB')
+        image = Image.open(buf).convert("RGB")
         rgb_array = np.array(image)
         buf.close()
 
@@ -121,4 +99,3 @@ class LocalDataSource:
             audio_duration_seconds=self.audio_duration_seconds,
         )
         return DataLoader(data, batch_size, shuffle)
-

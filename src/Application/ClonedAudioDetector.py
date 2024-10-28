@@ -22,13 +22,7 @@ class CNNClassifier(nn.Module):
             nn.ReLU(),
         )
 
-        self.fc = nn.Sequential(
-            nn.Linear(324864, 512),
-            nn.ReLU(),
-
-            nn.Linear(512, 2),
-            nn.Softmax()
-        )
+        self.fc = nn.Sequential(nn.Linear(324864, 512), nn.ReLU(), nn.Linear(512, 2), nn.Softmax())
 
     def forward(self, x):
         x = self.conv(x)
