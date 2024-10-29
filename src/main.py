@@ -12,7 +12,7 @@ config = AudioClassifierConfig(
     learning_rate=1e-3,
     batch_size=16,
     shuffle_batches=False,
-    epochs=20,
+    epochs=2,
     optimizer="Adadelta",
     torch_seed=None,
     # model arch
@@ -36,7 +36,7 @@ config = AudioClassifierConfig(
 )
 
 transform_normalization = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize(mean=[0.5], std=[0.5])]
+    [transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]
 )
 
 # Load data

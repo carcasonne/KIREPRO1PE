@@ -44,9 +44,8 @@ class AudioData(Dataset):
         file_path, label = self.files[idx]
         spec = self.convert_to_spectrogram(file_path)
         img = self.spectrogram_to_rgb(spec)
-        # shit doesnt normalize yet
-        # if self.transform:
-        #     spec = self.transform(spec)
+        if self.transform:
+            img = self.transform(img)
         return img, label
 
     def convert_to_spectrogram(self, filepath):
@@ -79,8 +78,7 @@ class AudioData(Dataset):
         # Have to convert from uint8 to float32 and then normalize
         rgb_image_array_float = rgb_array.astype(np.float32) / 255.0
         # Swaps the dimensions from 462, 775, 3 to 3, 462, 775
-        rgb_image_array_transposed = np.transpose(rgb_image_array_float, (2, 0, 1))
-        return rgb_image_array_transposed
+        return rgb_image_array_float
 
 
 class LocalDataSource:
