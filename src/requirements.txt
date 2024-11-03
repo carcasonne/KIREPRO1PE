@@ -1,6 +1,6 @@
 matplotlib
 librosa
-torch
+pytorch
 torchvision
 numpy
 scipy
