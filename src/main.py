@@ -5,7 +5,7 @@ from Application.DataProcessor import DataProcessor
 from Application.DataSource import DataType, LocalDataSource
 from config import *
 from config import AudioClassifierConfig
-from Core.ResultsDashboardGenerator import TrainingReporter
+from Core.ResultsDashboardGenerator import ColorScheme, TrainingReporter
 
 config = AudioClassifierConfig(
     # core params
@@ -29,7 +29,7 @@ config = AudioClassifierConfig(
     channels=3,
     duration=1,
     # misc
-    notes="This data report is not fully complete, and is work in progress",
+    notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
     data_path="../audio_files_samples",
     output_path="../output",
     run_cuda=True,
@@ -58,7 +58,14 @@ classifier = CNNClassifier(no_channels=config.channels)
 
 # Define data pipeline
 data_processor = DataProcessor(classifier, config.run_cuda)
-reporter = TrainingReporter(config=config, base_dir="../training_runs")
+reporter = TrainingReporter(
+    config=config,
+    training_data=training_data,
+    validation_data=validation_data,
+    testing_data=testing_data,
+    color_scheme=ColorScheme.FRIEREN,
+    base_dir="../training_runs",
+)
 
 # Process data
 results = data_processor.process(
