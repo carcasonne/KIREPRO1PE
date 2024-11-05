@@ -1,0 +1,250 @@
+{
+  "timestamp": "20241105_193511",
+  "config": {
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "shuffle_batches": false,
+    "epochs": 2,
+    "optimizer": "Adadelta",
+    "model_name": "CNN Classifier from Paper",
+    "hidden_dims": [
+      256,
+      128,
+      64
+    ],
+    "activation": "gelu",
+    "sample_rate": 16000,
+    "img_height": 625,
+    "img_width": 469,
+    "channels": 3,
+    "duration": 1,
+    "data_path": "../audio_files_samples",
+    "output_path": "../output",
+    "run_cuda": true,
+    "notes": "Testing dashboard generation with simulated data",
+    "torch_seed": null,
+    "dropout": 0.1,
+    "weight_decay": 0
+  },
+  "system_info": {
+    "device": "NVIDIA GeForce RTX 3070",
+    "cuda_version": "12.4",
+    "torch_version": "2.5.0+cu124",
+    "ram": "31.1GB",
+    "platform": "Linux-6.11.6-arch1-1-x86_64-with-glibc2.40",
+    "python_version": "3.12.7"
+  },
+  "results": {
+    "training": [
+      {
+        "ABSOLUTE_LOSS": 0.8953655105983843,
+        "ACCURACY": 0.5115302705650181,
+        "AVERAGE_LOSS": 0.8953655105983843
+      },
+      {
+        "ABSOLUTE_LOSS": 0.9507014954532776,
+        "ACCURACY": 0.5312666066245118,
+        "AVERAGE_LOSS": 0.4753507477266388
+      },
+      {
+        "ABSOLUTE_LOSS": 0.8130336688497943,
+        "ACCURACY": 0.6064540237244713,
+        "AVERAGE_LOSS": 0.27101122294993146
+      },
+      {
+        "ABSOLUTE_LOSS": 0.7400313656551838,
+        "ACCURACY": 0.6222370396909505,
+        "AVERAGE_LOSS": 0.18500784141379595
+      },
+      {
+        "ABSOLUTE_LOSS": 0.6172992858933437,
+        "ACCURACY": 0.6887702126832603,
+        "AVERAGE_LOSS": 0.12345985717866874
+      },
+      {
+        "ABSOLUTE_LOSS": 0.5974447536689582,
+        "ACCURACY": 0.696184598703114,
+        "AVERAGE_LOSS": 0.09957412561149304
+      },
+      {
+        "ABSOLUTE_LOSS": 0.5567406291966556,
+        "ACCURACY": 0.7355878580411055,
+        "AVERAGE_LOSS": 0.07953437559952223
+      },
+      {
+        "ABSOLUTE_LOSS": 0.4680936965871153,
+        "ACCURACY": 0.7853232000009472,
+        "AVERAGE_LOSS": 0.05851171207338941
+      },
+      {
+        "ABSOLUTE_LOSS": 0.4913341395107395,
+        "ACCURACY": 0.7698491527813043,
+        "AVERAGE_LOSS": 0.054592682167859945
+      },
+      {
+        "ABSOLUTE_LOSS": 0.48329749971462904,
+        "ACCURACY": 0.8083293052139531,
+        "AVERAGE_LOSS": 0.0483297499714629
+      },
+      {
+        "ABSOLUTE_LOSS": 0.3031219542099365,
+        "ACCURACY": 0.811636741349076,
+        "AVERAGE_LOSS": 0.027556541291812408
+      },
+      {
+        "ABSOLUTE_LOSS": 0.4362041306551509,
+        "ACCURACY": 0.8463375115532482,
+        "AVERAGE_LOSS": 0.03635034422126258
+      },
+      {
+        "ABSOLUTE_LOSS": 0.32905511830153944,
+        "ACCURACY": 0.8244956376694261,
+        "AVERAGE_LOSS": 0.025311932177041495
+      },
+      {
+        "ABSOLUTE_LOSS": 0.2888831840350488,
+        "ACCURACY": 0.8172029631344984,
+        "AVERAGE_LOSS": 0.02063451314536063
+      },
+      {
+        "ABSOLUTE_LOSS": 0.2844222606301357,
+        "ACCURACY": 0.8560668693252877,
+        "AVERAGE_LOSS": 0.018961484042009046
+      },
+      {
+        "ABSOLUTE_LOSS": 0.23441466918255233,
+        "ACCURACY": 0.9051555730359678,
+        "AVERAGE_LOSS": 0.01465091682390952
+      },
+      {
+        "ABSOLUTE_LOSS": 0.2124223850221337,
+        "ACCURACY": 0.8631465579208991,
+        "AVERAGE_LOSS": 0.012495434413066688
+      },
+      {
+        "ABSOLUTE_LOSS": 0.1274885971266569,
+        "ACCURACY": 0.868404443895849,
+        "AVERAGE_LOSS": 0.007082699840369827
+      },
+      {
+        "ABSOLUTE_LOSS": 0.12730464369039832,
+        "ACCURACY": 0.9016517028450812,
+        "AVERAGE_LOSS": 0.006700244404757806
+      },
+      {
+        "ABSOLUTE_LOSS": 0.192464990223886,
+        "ACCURACY": 0.8741467544981705,
+        "AVERAGE_LOSS": 0.009623249511194299
+      }
+    ],
+    "validation": [
+      {
+        "ABSOLUTE_LOSS": 1.105391794485652,
+        "ACCURACY": 0.46519510591003915,
+        "AVERAGE_LOSS": 1.105391794485652
+      },
+      {
+        "ABSOLUTE_LOSS": 1.1119579200367529,
+        "ACCURACY": 0.5146772554056545,
+        "AVERAGE_LOSS": 0.5559789600183764
+      },
+      {
+        "ABSOLUTE_LOSS": 0.9144282411620035,
+        "ACCURACY": 0.5906817552570053,
+        "AVERAGE_LOSS": 0.30480941372066783
+      },
+      {
+        "ABSOLUTE_LOSS": 0.9054129302450072,
+        "ACCURACY": 0.6541985984171321,
+        "AVERAGE_LOSS": 0.2263532325612518
+      },
+      {
+        "ABSOLUTE_LOSS": 0.7666622999547017,
+        "ACCURACY": 0.6606116372077581,
+        "AVERAGE_LOSS": 0.15333245999094033
+      },
+      {
+        "ABSOLUTE_LOSS": 0.5456542988427968,
+        "ACCURACY": 0.6543186594036814,
+        "AVERAGE_LOSS": 0.09094238314046614
+      },
+      {
+        "ABSOLUTE_LOSS": 0.588174896792226,
+        "ACCURACY": 0.6714338693581697,
+        "AVERAGE_LOSS": 0.08402498525603229
+      },
+      {
+        "ABSOLUTE_LOSS": 0.5871629612924386,
+        "ACCURACY": 0.6887827010901549,
+        "AVERAGE_LOSS": 0.07339537016155483
+      },
+      {
+        "ABSOLUTE_LOSS": 0.5508170671908896,
+        "ACCURACY": 0.7072574421034572,
+        "AVERAGE_LOSS": 0.06120189635454329
+      },
+      {
+        "ABSOLUTE_LOSS": 0.45542999706461934,
+        "ACCURACY": 0.7534142535446139,
+        "AVERAGE_LOSS": 0.04554299970646193
+      },
+      {
+        "ABSOLUTE_LOSS": 0.38376158536843025,
+        "ACCURACY": 0.7556867044177582,
+        "AVERAGE_LOSS": 0.03488741685167548
+      },
+      {
+        "ABSOLUTE_LOSS": 0.4551156802552934,
+        "ACCURACY": 0.8341557435960347,
+        "AVERAGE_LOSS": 0.03792630668794112
+      },
+      {
+        "ABSOLUTE_LOSS": 0.3584630879471722,
+        "ACCURACY": 0.8596704231500094,
+        "AVERAGE_LOSS": 0.027574083688244013
+      },
+      {
+        "ABSOLUTE_LOSS": 0.23231842664472613,
+        "ACCURACY": 0.784026724414441,
+        "AVERAGE_LOSS": 0.016594173331766153
+      },
+      {
+        "ABSOLUTE_LOSS": 0.2533179975673796,
+        "ACCURACY": 0.8107856107468382,
+        "AVERAGE_LOSS": 0.016887866504491974
+      },
+      {
+        "ABSOLUTE_LOSS": 0.22455388025574247,
+        "ACCURACY": 0.7905431983152084,
+        "AVERAGE_LOSS": 0.014034617515983904
+      },
+      {
+        "ABSOLUTE_LOSS": 0.16157610309018755,
+        "ACCURACY": 0.797941453552442,
+        "AVERAGE_LOSS": 0.009504476652363973
+      },
+      {
+        "ABSOLUTE_LOSS": 0.152657327418376,
+        "ACCURACY": 0.8401474601610831,
+        "AVERAGE_LOSS": 0.008480962634354224
+      },
+      {
+        "ABSOLUTE_LOSS": 0.14021639484088913,
+        "ACCURACY": 0.876867023848147,
+        "AVERAGE_LOSS": 0.007379810254783638
+      },
+      {
+        "ABSOLUTE_LOSS": 0.2501003336387903,
+        "ACCURACY": 0.8074394083134883,
+        "AVERAGE_LOSS": 0.012505016681939516
+      }
+    ],
+    "testing": [
+      {
+        "ABSOLUTE_LOSS": 0.1259936622894911,
+        "ACCURACY": 0.8314610877277587,
+        "AVERAGE_LOSS": 0.0042838926689259035
+      }
+    ]
+  }
+}
