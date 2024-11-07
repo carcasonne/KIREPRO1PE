@@ -69,7 +69,7 @@ reporter = TrainingReporter(
 
 # Process data
 results = data_processor.process(
-    training_data, validation_data, config.epochs, config.learning_rate
+    training_data, testing_data, config.epochs, config.learning_rate
 )
 
 # Interpret data
