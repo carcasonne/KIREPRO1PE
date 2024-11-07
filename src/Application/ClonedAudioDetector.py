@@ -23,7 +23,7 @@ class CNNClassifier(nn.Module):
         )
         #TODO: figure out if we need softmax or not
         self.fc = nn.Sequential(nn.Linear(39744, 512), nn.ReLU(),
-                                nn.Linear(512, 2))
+                                nn.Linear(512, 2), nn.Softmax(dim=1))
 
     def forward(self, x):
         x = self.conv(x)

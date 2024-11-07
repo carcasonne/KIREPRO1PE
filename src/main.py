@@ -9,10 +9,10 @@ from Core.ResultsDashboardGenerator import ColorScheme, TrainingReporter
 
 config = AudioClassifierConfig(
     # core params
-    learning_rate=1e-3,
+    learning_rate=0.5,
     batch_size=16,
-    shuffle_batches=False,
-    epochs=20,
+    shuffle_batches=True,
+    epochs=10,
     optimizer="Adadelta",
     torch_seed=None,
     # model arch

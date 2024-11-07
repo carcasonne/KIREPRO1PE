@@ -25,7 +25,8 @@ class DataProcessor:
         this WILL affect the model associated with this DataProcessor
         return results from training"""
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adadelta(self.model.parameters(), lr=learning_rate)
+        # By default, Adadelta adapts its learning rate
+        optimizer = torch.optim.Adadelta(self.model.parameters())
         return self.train_model(
             self.model,
             training_data,
