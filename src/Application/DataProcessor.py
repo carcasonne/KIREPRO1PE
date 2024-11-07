@@ -51,7 +51,7 @@ class DataProcessor:
         if use_cuda_if_available and torch.cuda.is_available():
             device = "cuda"
 
-        model.to(device)
+        model = model.to(device)
         results = Results()
 
         for epoch in range(n_epochs):

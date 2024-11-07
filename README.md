@@ -13,6 +13,19 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+# Dataset
+
+`audio_files_samples` and `audio_files_250` contains files from the
+Real or Fake dataset from [Kaggle](https://www.kaggle.com/datasets/mohammedabdeldayem/the-fake-or-real-dataset?),  specifically the `for-2sec` folder.
+
+`audio_files_samples` contains 40 training, testing and validation files equally 
+split into Real and Fake audio. For testing purposes only.
+
+`audio_files_250` contains 250 audio files split into training and testing
+in a 4 : 1 split, with equal amount of Real and Fake audio. 
+(Also has a validation folder to make the program work.)
+
+
 # graphic cards requirements
 
 log from running with batch size 16:

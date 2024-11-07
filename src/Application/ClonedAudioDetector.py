@@ -10,19 +10,20 @@ class CNNClassifier(nn.Module):
             nn.MaxPool2d(2),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Conv2d(32, 64, kernel_size=3),
+            nn.Conv2d(32, 32, kernel_size=3),
             nn.MaxPool2d(2),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3),
+            nn.Conv2d(32, 32, kernel_size=3),
             nn.MaxPool2d(2),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Conv2d(128, 256, kernel_size=3),
+            nn.Conv2d(32, 32, kernel_size=3),
             nn.MaxPool2d(2),
             nn.ReLU(),
         )
-
-        self.fc = nn.Sequential(nn.Linear(317952, 512), nn.ReLU(), nn.Linear(512, 2), nn.Softmax())
+        #TODO: figure out if we need softmax or not
+        self.fc = nn.Sequential(nn.Linear(39744, 512), nn.ReLU(),
+                                nn.Linear(512, 2))
 
     def forward(self, x):
         x = self.conv(x)

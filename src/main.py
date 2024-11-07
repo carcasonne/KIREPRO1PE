@@ -12,12 +12,12 @@ config = AudioClassifierConfig(
     learning_rate=1e-3,
     batch_size=16,
     shuffle_batches=False,
-    epochs=2,
+    epochs=20,
     optimizer="Adadelta",
     torch_seed=None,
     # model arch
     model_name="CNN Classifier from Paper",
-    hidden_dims=[256, 128, 64],
+    hidden_dims=[32],
     activation="gelu",
     # regularization
     dropout=0.1,
@@ -30,7 +30,7 @@ config = AudioClassifierConfig(
     duration=1,
     # misc
     notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
-    data_path="../audio_files_samples",
+    data_path="../audio_files_250",
     output_path="../output",
     run_cuda=True,
 )
