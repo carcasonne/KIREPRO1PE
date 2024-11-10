@@ -81,6 +81,31 @@ class AudioData(Dataset):
         return rgb_image_array_float
 
 
+# Creates a dataset combining samples from training, testing and validation
+# needed for k_fold validation
+class AudioDataTotal(AudioData):
+    def __init__(
+            self,
+            root_dir: str,
+            transform,
+            sample_rate: int,
+            audio_duration_seconds: int,
+    ):
+        self.transform = transform
+        self.sample_rate = sample_rate
+        self.audio_duration_seconds = audio_duration_seconds
+        self.files = []
+
+        for top_level in os.listdir(root_dir):
+            top_level_path = os.path.join(root_dir, top_level)
+
+            for label in AudioLabel:
+                class_path = os.path.join(top_level_path, label.name.lower())
+                for file_name in os.listdir(class_path):
+                    file_path = os.path.join(class_path, file_name)
+                    self.files.append((file_path, label.value))
+
+
 class LocalDataSource:
     def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
         self.root_dir = root_dir
@@ -97,3 +122,11 @@ class LocalDataSource:
             audio_duration_seconds=self.audio_duration_seconds,
         )
         return DataLoader(data, batch_size, shuffle)
+
+    def get_k_fold_dataset(self) -> AudioData:
+        return AudioDataTotal(
+            root_dir=self.root_dir,
+            transform=self.transform,
+            sample_rate=self.sample_rate,
+            audio_duration_seconds=self.audio_duration_seconds,
+        )
