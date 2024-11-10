@@ -12,8 +12,8 @@ config = AudioClassifierConfig(
     learning_rate=None,
     batch_size=16,
     shuffle_batches=True,
-    epochs=5,
-    k_folds=3,  # if k-folds = None, do not use k-fold method
+    epochs=10,
+    k_folds=2,  # if k-folds = None, do not use k-fold method
     optimizer="Adadelta",
     torch_seed=None,
     # model arch
