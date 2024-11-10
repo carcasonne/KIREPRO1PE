@@ -1,0 +1,87 @@
+{
+  "timestamp": "20241110_184051",
+  "config": {
+    "learning_rate": 0.5,
+    "batch_size": 16,
+    "shuffle_batches": true,
+    "epochs": 1,
+    "optimizer": "Adadelta",
+    "k_folds": 2,
+    "model_name": "CNN Classifier from Paper",
+    "hidden_dims": [
+      32
+    ],
+    "activation": "gelu",
+    "sample_rate": 16000,
+    "img_height": 625,
+    "img_width": 469,
+    "channels": 3,
+    "duration": 1,
+    "data_path": "../audio_files_samples",
+    "output_path": "../output",
+    "run_cuda": true,
+    "notes": "The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
+    "torch_seed": null,
+    "dropout": 0.1,
+    "weight_decay": 0
+  },
+  "system_info": {
+    "device": "NVIDIA GeForce RTX 3070",
+    "cuda_version": "12.4",
+    "torch_version": "2.5.0+cu124",
+    "ram": "31.1GB",
+    "platform": "Linux-6.11.6-arch1-1-x86_64-with-glibc2.40",
+    "python_version": "3.12.7"
+  },
+  "k_fold_context": {
+    "num_folds": 2,
+    "total_samples": 120,
+    "fold_sizes": {
+      "training": 20,
+      "validation": 20,
+      "testing": 20
+    }
+  },
+  "folds": [
+    {
+      "fold_index": 0,
+      "results": {
+        "training": [
+          {
+            "ABSOLUTE_LOSS": 41.524123191833496,
+            "AVERAGE_LOSS": 0.6920687198638916,
+            "ACCURACY": 0.5333333333333333
+          }
+        ],
+        "validation": [
+          {
+            "ABSOLUTE_LOSS": 41.65441966056824,
+            "AVERAGE_LOSS": 0.6942403276761373,
+            "ACCURACY": 0.4666666666666667
+          }
+        ],
+        "testing": []
+      }
+    },
+    {
+      "fold_index": 1,
+      "results": {
+        "training": [
+          {
+            "ABSOLUTE_LOSS": 41.643115282058716,
+            "AVERAGE_LOSS": 0.6940519213676453,
+            "ACCURACY": 0.4666666666666667
+          }
+        ],
+        "validation": [
+          {
+            "ABSOLUTE_LOSS": 41.539844274520874,
+            "AVERAGE_LOSS": 0.6923307379086813,
+            "ACCURACY": 0.5333333333333333
+          }
+        ],
+        "testing": []
+      }
+    }
+  ]
+}

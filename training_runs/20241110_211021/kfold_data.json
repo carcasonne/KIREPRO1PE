@@ -1,0 +1,125 @@
+{
+  "timestamp": "20241110_211021",
+  "config": {
+    "learning_rate": null,
+    "batch_size": 16,
+    "shuffle_batches": true,
+    "epochs": 2,
+    "optimizer": "Adadelta",
+    "k_folds": 3,
+    "model_name": "CNN Classifier from Paper",
+    "hidden_dims": [
+      32
+    ],
+    "activation": "gelu",
+    "sample_rate": 16000,
+    "img_height": 625,
+    "img_width": 469,
+    "channels": 3,
+    "duration": 1,
+    "data_path": "../audio_files_samples",
+    "output_path": "../output",
+    "run_cuda": true,
+    "notes": "The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
+    "torch_seed": null,
+    "dropout": 0.1,
+    "weight_decay": 0
+  },
+  "system_info": {
+    "device": "NVIDIA GeForce RTX 3070",
+    "cuda_version": "12.4",
+    "torch_version": "2.5.0+cu124",
+    "ram": "31.1GB",
+    "platform": "Linux-6.11.6-arch1-1-x86_64-with-glibc2.40",
+    "python_version": "3.12.7"
+  },
+  "k_fold_context": {
+    "num_folds": 3,
+    "total_samples": 120,
+    "fold_sizes": {
+      "training": 13,
+      "validation": 13,
+      "testing": 13
+    }
+  },
+  "folds": [
+    {
+      "fold_index": 0,
+      "results": {
+        "training": [
+          {
+            "AVERAGE_LOSS": 0.6955878615379334,
+            "ACCURACY": 0.4625
+          },
+          {
+            "AVERAGE_LOSS": 0.6956022262573243,
+            "ACCURACY": 0.4625
+          }
+        ],
+        "validation": [
+          {
+            "AVERAGE_LOSS": 0.6891190767288208,
+            "ACCURACY": 0.575
+          },
+          {
+            "AVERAGE_LOSS": 0.6891190767288208,
+            "ACCURACY": 0.575
+          }
+        ],
+        "testing": []
+      }
+    },
+    {
+      "fold_index": 1,
+      "results": {
+        "training": [
+          {
+            "AVERAGE_LOSS": 0.6928025245666504,
+            "ACCURACY": 0.5125
+          },
+          {
+            "AVERAGE_LOSS": 0.6930906534194946,
+            "ACCURACY": 0.5125
+          }
+        ],
+        "validation": [
+          {
+            "AVERAGE_LOSS": 0.6942283868789673,
+            "ACCURACY": 0.475
+          },
+          {
+            "AVERAGE_LOSS": 0.6942284345626831,
+            "ACCURACY": 0.475
+          }
+        ],
+        "testing": []
+      }
+    },
+    {
+      "fold_index": 2,
+      "results": {
+        "training": [
+          {
+            "AVERAGE_LOSS": 0.6960533022880554,
+            "ACCURACY": 0.475
+          },
+          {
+            "AVERAGE_LOSS": 0.696418023109436,
+            "ACCURACY": 0.475
+          }
+        ],
+        "validation": [
+          {
+            "AVERAGE_LOSS": 0.6900244951248169,
+            "ACCURACY": 0.55
+          },
+          {
+            "AVERAGE_LOSS": 0.69002445936203,
+            "ACCURACY": 0.55
+          }
+        ],
+        "testing": []
+      }
+    }
+  ]
+}

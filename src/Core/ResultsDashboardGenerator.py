@@ -1,3 +1,4 @@
+import colorsys
 import json
 import os
 import platform
@@ -29,6 +30,10 @@ class ColorScheme(Enum):
     GRUVBOX = auto()
     NORD = auto()
 
+    @property
+    def display_name(self) -> str:
+        return self.name.replace("_", " ").title()
+
 
 # Bit redundant, but makes it obvious which parts of the data loader the report is going to display
 @dataclass
@@ -42,6 +47,7 @@ class DatasetInfo:
     duration: int
     img_dims: tuple[int, int]
     channels: int
+    k_folds: int
 
 
 class MetricPlotter:
@@ -75,6 +81,7 @@ class TrainingReporter:
         self.plot_dir = os.path.join(self.run_dir, "plots")
         self.config = config
         self.color_scheme = color_scheme
+        self.metrictypes = []
 
         self.system_info = {
             "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
@@ -95,44 +102,15 @@ class TrainingReporter:
             duration=config.duration,
             img_dims=(config.img_height, config.img_width),
             channels=config.channels,
+            k_folds=config.k_folds,
         )
 
         os.makedirs(self.plot_dir, exist_ok=True)
 
-    def _serialize_results(self, results: Results) -> Dict[str, Any]:
-        return {
-            phase: [
-                {k.name: v for k, v in epoch.metrics.items()} for epoch in getattr(results, phase)
-            ]
-            for phase in ["training", "validation", "testing"]
-        }
-
-    def _serialize_config(self) -> Dict[str, Any]:
-        return {
-            k: str(v) if isinstance(v, (type, torch.device)) else v
-            for k, v in self.config.__dict__.items()
-        }
-
-    def save_run_data(self, results: Results):
-        data = {
-            "timestamp": self.timestamp,
-            "config": self._serialize_config(),
-            "system_info": self.system_info,
-            "results": self._serialize_results(results),
-        }
-
-        with open(os.path.join(self.run_dir, "run_data.json"), "w") as f:
-            json.dump(data, f, indent=2)
-
-    def generate_report(self, results: Results) -> str:
-        plots_info = self._generate_plots(results)
-        self.save_run_data(results)
-        return self._generate_dashboard(plots_info, results)
-
     def _generate_plots(self, results: Results) -> Dict[MetricType, str]:
         # existing plot generation code remains the same
         plots_info = {}
-        for metric_type in MetricType:
+        for metric_type in self.metrictypes:
             metric_data = MetricPlotter.extract_metric_data(results, metric_type)
             if not any(len(data) > 0 for data in metric_data.values()):
                 continue
@@ -157,8 +135,82 @@ class TrainingReporter:
             plots_info[metric_type] = os.path.relpath(plot_path, self.run_dir)
         return plots_info
 
-    def _generate_dashboard(self, plots_info: Dict[MetricType, str], results: Results) -> str:
-        dataloader_section = f"""
+    def generate_report(self, results: Results, complete_time: float) -> str:
+        plots_info = self._generate_plots(results)
+        self.metrictypes = results.get_present_metrics()
+        self.save_run_data(results)
+        return self._generate_dashboard(
+            plots_info=plots_info, results=results, complete_time=complete_time
+        )
+
+    def generate_report_k_folds(self, k_fold_results: List[Results], complete_time: float) -> str:
+        self._save_kfold_data(k_fold_results)
+        self.metrictypes = Results.get_present_metrics_from_list(k_fold_results)
+        return self._generate_dashboard(
+            plots_info=None,
+            results=None,
+            complete_time=complete_time,
+            k_fold_results=k_fold_results,
+        )
+
+    def _generate_dashboard(
+        self,
+        plots_info: Dict[MetricType, str],
+        results: Results,
+        complete_time: float,
+        k_fold_results: List[Results] | None = None,
+    ) -> str:
+        k = len(k_fold_results) if k_fold_results else None
+        k_fold_plots = None
+        k_fold_stats = None
+        graphs_metrics_section = None
+
+        if k_fold_results:
+            k_fold_plots = self._generate_kfold_plots(k_fold_results, k, self.plot_dir)
+            k_fold_stats = self._compute_kfold_statistics(k_fold_results)
+            graphs_metrics_section = self._get_k_folds_section_html(k_fold_plots, k_fold_stats)
+        else:
+            graphs_metrics_section = self._get_plots_section_html(
+                plots_info
+            ) + self._get_metrics_section_html(results)
+
+        dataloader_section = self._get_dataloader_section_html()
+        run_config_section = self._get_config_section_html()
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Training Run {self.timestamp}</title>
+                <style>
+                    {self._get_css()}
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>Training Run {self.timestamp}</h1>
+                    <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                    <p>Color Scheme: {self.color_scheme.name.title}</p>
+                    <p>Time to train model: {complete_time/60:.2f} minutes</p>
+                </div>
+
+                <div class="config-grid">
+                    {dataloader_section}
+                    {run_config_section}
+                </div>
+                {graphs_metrics_section}
+            </body>
+        </html>
+        """
+
+        output_path = os.path.join(self.run_dir, "report.html")
+        with open(output_path, "w") as f:
+            f.write(html)
+
+        return output_path
+
+    def _get_dataloader_section_html(self) -> str:
+        return f"""
             <div class="config-card">
                 <h2>DataLoader Configuration</h2>
                 <table>
@@ -173,6 +225,7 @@ class TrainingReporter:
                     <tr><td>Batch Size</td><td>{self.dataset_info.batch_size}</td></tr>
                     <tr><td>Shuffle Enabled</td><td>{self.dataset_info.shuffle}</td></tr>
                     <tr><td>Training Batches</td><td>{self.dataset_info.training_size // self.dataset_info.batch_size}</td></tr>
+                    <tr><td>K Folds</td><td>{self.dataset_info.k_folds}</td></tr>
                     
                     <tr><th colspan="2">Audio Processing</th></tr>
                     <tr><td>Sample Rate</td><td>{self.dataset_info.sample_rate} Hz</td></tr>
@@ -187,7 +240,8 @@ class TrainingReporter:
             </div>
         """
 
-        run_config_section = f"""
+    def _get_config_section_html(self) -> str:
+        return f"""
             <div class="config-card">
                 <h2>Run Configuration</h2>
                 <table>
@@ -195,6 +249,7 @@ class TrainingReporter:
                     <tr><td>Learning Rate</td><td>{self.config.learning_rate}</td></tr>
                     <tr><td>Optimizer</td><td>{self.config.optimizer}</td></tr>
                     <tr><td>Torch Seed</td><td>{self.config.torch_seed}</td></tr>
+                    <tr><td>Epochs</td><td>{self.config.epochs}</td></tr>
                     
                     <tr><th colspan="2">Model Architecture</th></tr>
                     <tr><td>Model</td><td>{self.config.model_name}</td></tr>
@@ -213,30 +268,8 @@ class TrainingReporter:
             </div>
         """
 
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Training Run {self.timestamp}</title>
-            <style>
-                {self._get_css()}
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <h1>Training Run {self.timestamp}</h1>
-                <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <p>Color Scheme: {self.color_scheme}</p>
-            </div>
-
-            <div class="config-grid">
-                {dataloader_section}
-                {run_config_section}
-            </div>
-        """
-
-        # plots section
-        html += '<div class="card"><h2>Training Metrics</h2><div class="metric-grid">'
+    def _get_plots_section_html(self, plots_info: Dict[MetricType, str]) -> str:
+        html = '<div class="card"><h2>Training Metrics</h2><div class="metric-grid">'
         for metric_type, plot_path in plots_info.items():
             html += f"""
                 <div>
@@ -245,9 +278,10 @@ class TrainingReporter:
                 </div>
             """
         html += "</div></div>"
+        return html
 
-        # metrics tables
-        html += '<div class="card"><h2>Final Metrics</h2>'
+    def _get_metrics_section_html(self, results: Results) -> str:
+        html = '<div class="card"><h2>Final Metrics</h2>'
         for phase in ["training", "validation", "testing"]:
             phase_data = getattr(results, phase)
             if phase_data:
@@ -266,13 +300,350 @@ class TrainingReporter:
                     """
                 html += "</table>"
 
-        html += "</div></body></html>"
+        html += "</div>"
+        return html
 
-        output_path = os.path.join(self.run_dir, "report.html")
-        with open(output_path, "w") as f:
-            f.write(html)
+    def _get_k_folds_section_html(self, k_fold_plots, k_fold_stats) -> str:
+        # stats table remains the same
+        html = '<div class="card"><h2>Cross Validation Statistics</h2>'
 
-        return output_path
+        # Keep existing stats table generation...
+        for phase in ["training", "validation", "testing"]:
+            if k_fold_stats[phase]["metrics"]:
+                html += f"<h3>{phase.capitalize()} Statistics</h3>"
+                html += """
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Mean</th>
+                                <th>Std Dev</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>Convergence (epochs)</th>
+                                <th>Stability</th>
+                            </tr>
+                """
+
+                for metric_type in sorted(
+                    k_fold_stats[phase]["metrics"].keys(), key=lambda x: x.name
+                ):
+                    metric_stats = k_fold_stats[phase]["metrics"][metric_type]
+                    convergence = k_fold_stats[phase]["convergence"][metric_type]
+                    stability = k_fold_stats[phase]["stability"][metric_type]
+
+                    html += f"""
+                        <tr>
+                            <td>{metric_type.name.replace("_", " ").title()}</td>
+                            <td>{metric_stats['mean']:.4f}</td>
+                            <td>{metric_stats['std']:.4f}</td>
+                            <td>{metric_stats['min']:.4f}</td>
+                            <td>{metric_stats['max']:.4f}</td>
+                            <td>{convergence['mean_epochs']:.1f} ± {convergence['std_epochs']:.1f}</td>
+                            <td>{stability['mean_variance']:.2e} ± {stability['std_variance']:.2e}</td>
+                        </tr>
+                    """
+                html += "</table></div>"
+        html += "</div>"
+
+        # Modified plots section for phase-split plots
+        html += '<div class="plots-grid">'
+
+        # Group by metric type
+        for metric_type in k_fold_plots["by_phase"].keys():
+            html += f"""
+                <div class="card plot-section">
+                    <h2>{metric_type.name.replace("_", " ").title()}</h2>
+                    <div class="metrics-container">
+                        <div class="metric-row">
+            """
+
+            # Show phase plots side by side
+            for phase in ["training", "validation", "testing"]:
+                if phase in k_fold_plots["by_phase"][metric_type]:
+                    html += f"""
+                        <div class="metric-item">
+                            <h3>{phase.capitalize()}</h3>
+                            <img src="{k_fold_plots["by_phase"][metric_type][phase]}" 
+                                alt="{phase} {metric_type.name}">
+                        </div>
+                    """
+
+            # Add aggregate and boxplot for this metric
+            html += f"""
+                        </div>
+                        <div class="metric-row summary-plots">
+                            <div class="metric-item">
+                                <h3>Aggregate Statistics</h3>
+                                <img src="{k_fold_plots["aggregate"][metric_type]}" 
+                                    alt="Aggregate {metric_type.name}">
+                            </div>
+                            <div class="metric-item">
+                                <h3>Distribution</h3>
+                                <img src="{k_fold_plots["boxplots"][metric_type]}" 
+                                    alt="Box plot {metric_type.name}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            """
+
+        html += "</div>"
+        return html
+
+    def _compute_kfold_statistics(self, results_list: List[Results]) -> Dict:
+        """Compute statistics across folds for each metric and phase."""
+        stats = {
+            phase: {"metrics": {}, "convergence": {}, "stability": {}}
+            for phase in ["training", "validation", "testing"]
+        }
+
+        for phase in ["training", "validation", "testing"]:
+            # Get final metrics for each fold
+            final_metrics = {}
+            for metric_type in self.metrictypes:
+                final_metrics[metric_type] = []
+
+            for results in results_list:
+                phase_data = getattr(results, phase)
+                if phase_data:
+                    for metric_type in self.metrictypes:
+                        value = phase_data[-1].get_metric(metric_type)
+                        if value is not None:
+                            final_metrics[metric_type].append(value)
+
+            # Compute statistics for each metric
+            for metric_type, values in final_metrics.items():
+                if values:
+                    stats[phase]["metrics"][metric_type] = {
+                        "mean": float(np.mean(values)),
+                        "std": float(np.std(values)),
+                        "min": float(np.min(values)),
+                        "max": float(np.max(values)),
+                        "values": values,
+                    }
+
+                    # Compute convergence (epochs to best metric)
+                    epochs_to_best = []
+                    for results in results_list:
+                        phase_data = getattr(results, phase)
+                        if phase_data:
+                            metric_values = [epoch.get_metric(metric_type) for epoch in phase_data]
+                            best_epoch = (
+                                np.argmax(metric_values)
+                                if metric_type.name.startswith("ACCURACY")
+                                else np.argmin(metric_values)
+                            )
+                            epochs_to_best.append(best_epoch + 1)
+
+                    stats[phase]["convergence"][metric_type] = {
+                        "mean_epochs": float(np.mean(epochs_to_best)),
+                        "std_epochs": float(np.std(epochs_to_best)),
+                    }
+
+                    # Compute stability (variance in last few epochs)
+                    last_epochs_variance = []
+                    for results in results_list:
+                        phase_data = getattr(results, phase)
+                        if phase_data:
+                            last_5_epochs = [
+                                epoch.get_metric(metric_type) for epoch in phase_data[-5:]
+                            ]
+                            last_epochs_variance.append(np.var(last_5_epochs))
+
+                    stats[phase]["stability"][metric_type] = {
+                        "mean_variance": float(np.mean(last_epochs_variance)),
+                        "std_variance": float(np.std(last_epochs_variance)),
+                    }
+
+        return stats
+
+    def style_plot(self, title: str, xlabel: str = "Epoch"):
+        """Helper to apply consistent theme styling to plots."""
+        theme = self._get_theme_css()[self.color_scheme]
+
+        plt.gca().set_facecolor(theme["bg-secondary"])
+        plt.gcf().set_facecolor(theme["bg-primary"])
+
+        plt.title(title, color=theme["text-primary"])
+        plt.xlabel(xlabel, color=theme["text-secondary"])
+        plt.ylabel(title.split()[-1], color=theme["text-secondary"])
+
+        plt.grid(True, alpha=0.3, color=theme["border"])
+        plt.tick_params(colors=theme["text-secondary"])
+
+        # fix legend styling
+        legend = plt.legend(
+            facecolor=theme["bg-secondary"], edgecolor=theme["border"], framealpha=1.0
+        )
+        plt.setp(legend.get_texts(), color=theme["text-primary"])
+        legend.get_frame().set_linewidth(1)
+        legend.get_frame().set_alpha(1.0)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+
+    def _generate_kfold_plots(
+        self, results_list: List[Results], k: int, plot_dir: str
+    ) -> Dict[str, Dict[MetricType, str]]:
+        """Generate plots using theme colors."""
+        plots_info = {"by_phase": {}, "aggregate": {}, "boxplots": {}}
+        colors = self._get_plot_colors(k)
+
+        for metric_type in self.metrictypes:
+            plots_info["by_phase"][metric_type] = {}
+
+            # 1. Phase-separated plots
+            for phase in ["training", "validation", "testing"]:
+                plt.figure(figsize=(12, 7))
+
+                for fold_idx, results in enumerate(results_list):
+                    metric_data = MetricPlotter.extract_metric_data(results, metric_type)
+                    data = metric_data[phase]
+
+                    if len(data) > 0:
+                        plt.plot(
+                            data,
+                            label=f"Fold {fold_idx + 1}",
+                            color=colors[fold_idx],
+                            alpha=0.8,
+                        )
+
+                self.style_plot(
+                    f'{phase.capitalize()} {metric_type.name.replace("_", " ").title()}'
+                )
+
+                plot_name = f"{phase}_{metric_type.name.lower()}.png"
+                plot_path = os.path.join(plot_dir, plot_name)
+                plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
+                plt.close()
+
+                plots_info["by_phase"][metric_type][phase] = os.path.relpath(
+                    plot_path, self.run_dir
+                )
+
+            # 2. Aggregate statistics plot
+            plt.figure(figsize=(12, 7))
+
+            for phase in ["training", "validation", "testing"]:
+                epoch_data = []
+                for results in results_list:
+                    phase_data = getattr(results, phase)
+                    if phase_data:
+                        metrics = [epoch.get_metric(metric_type) for epoch in phase_data]
+                        epoch_data.append(metrics)
+
+                if epoch_data:
+                    max_epochs = max(len(data) for data in epoch_data)
+                    padded_data = [
+                        np.pad(
+                            data, (0, max_epochs - len(data)), "constant", constant_values=np.nan
+                        )
+                        for data in epoch_data
+                    ]
+                    mean_curve = np.nanmean(padded_data, axis=0)
+                    std_curve = np.nanstd(padded_data, axis=0)
+
+                    epochs = np.arange(1, max_epochs + 1)
+                    plt.plot(
+                        epochs,
+                        mean_curve,
+                        label=f"{phase.capitalize()} (mean)",
+                        color=MetricPlotter.PHASE_COLORS[phase],
+                    )
+                    plt.fill_between(
+                        epochs,
+                        mean_curve - std_curve,
+                        mean_curve + std_curve,
+                        alpha=0.2,
+                        color=MetricPlotter.PHASE_COLORS[phase],
+                    )
+
+            self.style_plot(f'{metric_type.name.replace("_", " ").title()} (Mean ± Std)')
+
+            plot_name = f"aggregate_{metric_type.name.lower()}.png"
+            plot_path = os.path.join(plot_dir, plot_name)
+            plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
+            plt.close()
+
+            plots_info["aggregate"][metric_type] = os.path.relpath(plot_path, self.run_dir)
+
+            # 3. Box plots
+            plt.figure(figsize=(10, 6))
+            final_metrics = {phase: [] for phase in ["training", "validation", "testing"]}
+
+            for results in results_list:
+                for phase in ["training", "validation", "testing"]:
+                    phase_data = getattr(results, phase)
+                    if phase_data:
+                        final_metrics[phase].append(phase_data[-1].get_metric(metric_type))
+
+            data = [values for values in final_metrics.values() if values]
+            labels = [phase.capitalize() for phase, values in final_metrics.items() if values]
+
+            # Style the boxplot
+            boxplot = plt.boxplot(data, labels=labels, patch_artist=True)
+
+            # Style each box
+            for i, box in enumerate(boxplot["boxes"]):
+                box_color = MetricPlotter.PHASE_COLORS[["training", "validation", "testing"][i]]
+                box.set(facecolor=box_color, alpha=0.3)
+                plt.setp(boxplot["medians"][i], color=box_color)
+                plt.setp(boxplot["whiskers"][i * 2 : i * 2 + 2], color=box_color)
+                plt.setp(boxplot["caps"][i * 2 : i * 2 + 2], color=box_color)
+                plt.setp(boxplot["fliers"][i], markeredgecolor=box_color)
+
+            self.style_plot(
+                f'Final {metric_type.name.replace("_", " ").title()} Distribution', xlabel="Phase"
+            )
+
+            plot_name = f"boxplot_{metric_type.name.lower()}.png"
+            plot_path = os.path.join(plot_dir, plot_name)
+            plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
+            plt.close()
+
+            plots_info["boxplots"][metric_type] = os.path.relpath(plot_path, self.run_dir)
+
+        return plots_info
+
+    def _get_plot_colors(self, k: int) -> List[str]:
+        """Generate k distinct colors from the current theme."""
+        theme = self._get_theme_css()[self.color_scheme]
+
+        # base colors from theme
+        base_colors = [
+            theme["accent"],
+            theme["text-primary"],
+            theme["text-secondary"],
+            theme["border"],
+        ]
+
+        # create variations of accent color for more options
+        # shifting hue while keeping similar saturation/value
+
+        def hex_to_hsv(hex_color: str) -> tuple:
+            # convert hex to rgb
+            hex_color = hex_color.lstrip("#")
+            rgb = tuple(int(hex_color[i : i + 2], 16) / 255 for i in (0, 2, 4))
+            return colorsys.rgb_to_hsv(*rgb)
+
+        def hsv_to_hex(hsv: tuple) -> str:
+            rgb = colorsys.hsv_to_rgb(*hsv)
+            return f"#{int(rgb[0]*255):02x}{int(rgb[1]*255):02x}{int(rgb[2]*255):02x}"
+
+        # generate variations of accent color
+        accent_hsv = hex_to_hsv(theme["accent"])
+        variations = []
+        for i in range(k - len(base_colors)):
+            new_hue = (accent_hsv[0] + (i + 1) * (1.0 / k)) % 1.0
+            variations.append(hsv_to_hex((new_hue, accent_hsv[1], accent_hsv[2])))
+
+        all_colors = base_colors + variations
+
+        # ensure we have k colors by cycling if needed
+        return (
+            all_colors[:k]
+            if len(all_colors) >= k
+            else (all_colors * (k // len(all_colors) + 1))[:k]
+        )
 
     def _get_theme_css(self) -> str:
         themes = {
@@ -487,409 +858,131 @@ class TrainingReporter:
                 transition: background 0.2s ease;
             }}
         """
-        return theme_css
 
-    def generate_kfold_report(self, results_list: List[Results]) -> str:
+        plot_css = """
+            .plots-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 30px;
+                margin: 20px 0;
+            }
+
+            .plot-section {
+                margin-bottom: 20px;
+            }
+
+            .metrics-container {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .metric-row {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                width: 100%;
+            }
+
+            .summary-plots {
+                grid-template-columns: repeat(2, 1fr);
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border);
+            }
+
+            .metric-item {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .metric-item h3 {
+                margin: 0;
+                font-size: 1.1em;
+                color: var(--accent);
+                text-align: center;
+            }
+
+            .metric-item img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 1400px) {
+                .metric-row {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            @media (max-width: 900px) {
+                .metric-row {
+                    grid-template-columns: 1fr;
+                }
+            }
         """
-        Generate a report comparing k-fold cross validation results.
+
+        return theme_css + plot_css
+
+    def _serialize_results(self, results: Results) -> Dict[str, Any]:
+        return {
+            phase: [
+                {k.name: v for k, v in epoch.metrics.items()} for epoch in getattr(results, phase)
+            ]
+            for phase in ["training", "validation", "testing"]
+        }
+
+    def _serialize_config(self) -> Dict[str, Any]:
+        return {
+            k: str(v) if isinstance(v, (type, torch.device)) else v
+            for k, v in self.config.__dict__.items()
+        }
+
+    def save_run_data(self, results: Results):
+        data = {
+            "timestamp": self.timestamp,
+            "config": self._serialize_config(),
+            "system_info": self.system_info,
+            "results": self._serialize_results(results),
+        }
+
+        with open(os.path.join(self.run_dir, "run_data.json"), "w") as f:
+            json.dump(data, f, indent=2)
+
+    def _save_kfold_data(self, results_list: List[Results]):
+        """
+        Save k-fold validation data similar to save_run_data but with k-fold context.
+        Reuses existing serialization methods for consistency.
         """
         k = len(results_list)
-        # Create k-fold directory
-        kfold_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        kfold_dir = self.run_dir
-        kfold_plot_dir = self.plot_dir
-        os.makedirs(kfold_plot_dir, exist_ok=True)
 
-        # Generate plots and compute statistics
-        plots_info = self._generate_kfold_plots(results_list, k, kfold_plot_dir)
-        fold_stats = self._compute_kfold_statistics(results_list)
-
-        # Save run data
-        self._save_kfold_data(results_list, fold_stats, k, kfold_dir)
-
-        # Generate HTML report
-        html_path = self._generate_kfold_dashboard(plots_info, fold_stats, k, kfold_dir)
-
-        return html_path
-
-    def _compute_kfold_statistics(self, results_list: List[Results]) -> Dict:
-        """Compute statistics across folds for each metric and phase."""
-        stats = {
-            phase: {
-                "metrics": {},
-                "convergence": {},
-                "stability": {}
-            } for phase in ["training", "validation", "testing"]
-        }
-
-        for phase in ["training", "validation", "testing"]:
-            # Get final metrics for each fold
-            final_metrics = {}
-            for metric_type in MetricType:
-                final_metrics[metric_type] = []
-
-            for results in results_list:
-                phase_data = getattr(results, phase)
-                if phase_data:
-                    for metric_type in MetricType:
-                        value = phase_data[-1].get_metric(metric_type)
-                        if value is not None:
-                            final_metrics[metric_type].append(value)
-
-            # Compute statistics for each metric
-            for metric_type, values in final_metrics.items():
-                if values:
-                    stats[phase]["metrics"][metric_type] = {
-                        "mean": float(np.mean(values)),
-                        "std": float(np.std(values)),
-                        "min": float(np.min(values)),
-                        "max": float(np.max(values)),
-                        "values": values
-                    }
-
-                    # Compute convergence (epochs to best metric)
-                    epochs_to_best = []
-                    for results in results_list:
-                        phase_data = getattr(results, phase)
-                        if phase_data:
-                            metric_values = [epoch.get_metric(metric_type) for epoch in phase_data]
-                            best_epoch = np.argmax(metric_values) if metric_type.name.startswith(
-                                "ACCURACY") else np.argmin(metric_values)
-                            epochs_to_best.append(best_epoch + 1)
-
-                    stats[phase]["convergence"][metric_type] = {
-                        "mean_epochs": float(np.mean(epochs_to_best)),
-                        "std_epochs": float(np.std(epochs_to_best))
-                    }
-
-                    # Compute stability (variance in last few epochs)
-                    last_epochs_variance = []
-                    for results in results_list:
-                        phase_data = getattr(results, phase)
-                        if phase_data:
-                            last_5_epochs = [epoch.get_metric(metric_type) for epoch in phase_data[-5:]]
-                            last_epochs_variance.append(np.var(last_5_epochs))
-
-                    stats[phase]["stability"][metric_type] = {
-                        "mean_variance": float(np.mean(last_epochs_variance)),
-                        "std_variance": float(np.std(last_epochs_variance))
-                    }
-
-        return stats
-
-
-    def _generate_kfold_plots(
-            self, results_list: List[Results], k: int, plot_dir: str
-    ) -> Dict[str, Dict[MetricType, str]]:
-        """Generate both individual fold plots and aggregate statistics plots."""
-        plots_info = {
-            "individual": {},
-            "aggregate": {},
-            "boxplots": {}
-        }
-
-        # Color palette for different folds
-        colors = plt.cm.tab10(np.linspace(0, 1, k))
-
-        # 1. Individual fold plots
-        for metric_type in MetricType:
-            plt.figure(figsize=(12, 7))
-
-            for fold_idx, results in enumerate(results_list):
-                metric_data = MetricPlotter.extract_metric_data(results, metric_type)
-
-                for phase, data in metric_data.items():
-                    if len(data) > 0:
-                        plt.plot(
-                            data,
-                            label=f"Fold {fold_idx + 1} - {phase.capitalize()}",
-                            color=colors[fold_idx],
-                            alpha=0.8,
-                        )
-
-            plt.title(f'{metric_type.name.replace("_", " ").title()} Across Folds')
-            plt.xlabel("Epoch")
-            plt.ylabel(metric_type.name.replace("_", " ").title())
-            plt.grid(True, alpha=0.3)
-            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-
-            plot_name = f"individual_{metric_type.name.lower()}.png"
-            plot_path = os.path.join(plot_dir, plot_name)
-            plt.savefig(plot_path, bbox_inches='tight')
-            plt.close()
-
-            plots_info["individual"][metric_type] = os.path.relpath(plot_path, self.run_dir)
-
-            # 2. Aggregate statistics plot (mean ± std)
-            plt.figure(figsize=(12, 7))
-
-            for phase in ["training", "validation", "testing"]:
-                epoch_data = []
-                for results in results_list:
-                    phase_data = getattr(results, phase)
-                    if phase_data:
-                        metrics = [epoch.get_metric(metric_type) for epoch in phase_data]
-                        epoch_data.append(metrics)
-
-                if epoch_data:
-                    max_epochs = max(len(data) for data in epoch_data)
-                    padded_data = [np.pad(data, (0, max_epochs - len(data)), 'constant', constant_values=np.nan)
-                                   for data in epoch_data]
-                    mean_curve = np.nanmean(padded_data, axis=0)
-                    std_curve = np.nanstd(padded_data, axis=0)
-
-                    epochs = np.arange(1, max_epochs + 1)
-                    plt.plot(epochs, mean_curve, label=f"{phase.capitalize()} (mean)",
-                             color=MetricPlotter.PHASE_COLORS[phase])
-                    plt.fill_between(epochs, mean_curve - std_curve, mean_curve + std_curve,
-                                     alpha=0.2, color=MetricPlotter.PHASE_COLORS[phase])
-
-            plt.title(f'{metric_type.name.replace("_", " ").title()} (Mean ± Std)')
-            plt.xlabel("Epoch")
-            plt.ylabel(metric_type.name.replace("_", " ").title())
-            plt.grid(True, alpha=0.3)
-            plt.legend()
-
-            plot_name = f"aggregate_{metric_type.name.lower()}.png"
-            plot_path = os.path.join(plot_dir, plot_name)
-            plt.savefig(plot_path, bbox_inches='tight')
-            plt.close()
-
-            plots_info["aggregate"][metric_type] = os.path.relpath(plot_path, self.run_dir)
-
-            # 3. Box plots of final metrics
-            plt.figure(figsize=(10, 6))
-            final_metrics = {phase: [] for phase in ["training", "validation", "testing"]}
-
-            for results in results_list:
-                for phase in ["training", "validation", "testing"]:
-                    phase_data = getattr(results, phase)
-                    if phase_data:
-                        final_metrics[phase].append(phase_data[-1].get_metric(metric_type))
-
-            data = [values for values in final_metrics.values() if values]
-            labels = [phase.capitalize() for phase, values in final_metrics.items() if values]
-
-            plt.boxplot(data, labels=labels)
-            plt.title(f'Final {metric_type.name.replace("_", " ").title()} Distribution')
-            plt.grid(True, alpha=0.3)
-
-            plot_name = f"boxplot_{metric_type.name.lower()}.png"
-            plot_path = os.path.join(plot_dir, plot_name)
-            plt.savefig(plot_path)
-            plt.close()
-
-            plots_info["boxplots"][metric_type] = os.path.relpath(plot_path, self.run_dir)
-
-        return plots_info
-    """
-    def _generate_kfold_plots(
-            self, results_list: List[Results], k: int, plot_dir: str
-    ) -> Dict[str, Dict[MetricType, str]]:
-        plots_info = {
-            "individual": {},
-            "aggregate": {},
-            "boxplots": {}
-        }
-
-        # Color palette for different folds
-        colors = plt.cm.tab10(np.linspace(0, 1, k))
-
-        # 1. Individual fold plots
-        for metric_type in MetricType:
-            plt.figure(figsize=(12, 7))
-
-            for fold_idx, results in enumerate(results_list):
-                metric_data = MetricPlotter.extract_metric_data(results, metric_type)
-
-                for phase, data in metric_data.items():
-                    if len(data) > 0:
-                        plt.plot(
-                            data,
-                            label=f"Fold {fold_idx + 1} - {phase.capitalize()}",
-                            color=colors[fold_idx],
-                            alpha=0.8,
-                        )
-
-            plot_name = f"individual_{metric_type.name.lower()}.png"
-            plot_path = os.path.join("plots", plot_name)  # Relative to kfold directory
-            plt.savefig(os.path.join(plot_dir, plot_name), bbox_inches='tight')
-            plt.close()
-            plots_info["individual"][metric_type] = plot_path
-
-            # Aggregate statistics plot
-            plt.figure(figsize=(12, 7))
-            # [Previous aggregate plotting code]
-            plot_name = f"aggregate_{metric_type.name.lower()}.png"
-            plot_path = os.path.join("plots", plot_name)  # Relative to kfold directory
-            plt.savefig(os.path.join(plot_dir, plot_name), bbox_inches='tight')
-            plt.close()
-            plots_info["aggregate"][metric_type] = plot_path
-
-            # Box plots
-            plt.figure(figsize=(10, 6))
-            # [Previous box plot code]
-            plot_name = f"boxplot_{metric_type.name.lower()}.png"
-            plot_path = os.path.join("plots", plot_name)  # Relative to kfold directory
-            plt.savefig(os.path.join(plot_dir, plot_name))
-            plt.close()
-            plots_info["boxplots"][metric_type] = plot_path
-
-        return plots_info
-"""
-    def _generate_kfold_dashboard(
-            self,
-            plots_info: Dict[str, Dict[MetricType, str]],
-            fold_stats: Dict,
-            k: int,
-            kfold_dir: str,
-    ) -> str:
-        """Generate HTML dashboard for k-fold cross validation results."""
-        # Generate statistics table
-        stats_table = '<div class="card"><h2>Cross Validation Statistics</h2>'
-        print(plots_info)
-        for phase in ["training", "validation", "testing"]:
-            if fold_stats[phase]["metrics"]:
-                stats_table += f'<h3>{phase.capitalize()} Statistics</h3>'
-                stats_table += """
-                    <div class="table-container">
-                        <table>
-                            <tr>
-                                <th>Metric</th>
-                                <th>Mean</th>
-                                <th>Std Dev</th>
-                                <th>Min</th>
-                                <th>Max</th>
-                                <th>Convergence (epochs)</th>
-                                <th>Stability</th>
-                            </tr>
-                """
-
-                for metric_type in sorted(fold_stats[phase]["metrics"].keys(), key=lambda x: x.name):
-                    metric_stats = fold_stats[phase]["metrics"][metric_type]
-                    convergence = fold_stats[phase]["convergence"][metric_type]
-                    stability = fold_stats[phase]["stability"][metric_type]
-
-                    stats_table += f"""
-                        <tr>
-                            <td>{metric_type.name.replace("_", " ").title()}</td>
-                            <td>{metric_stats['mean']:.4f}</td>
-                            <td>{metric_stats['std']:.4f}</td>
-                            <td>{metric_stats['min']:.4f}</td>
-                            <td>{metric_stats['max']:.4f}</td>
-                            <td>{convergence['mean_epochs']:.1f} ± {convergence['std_epochs']:.1f}</td>
-                            <td>{stability['mean_variance']:.2e} ± {stability['std_variance']:.2e}</td>
-                        </tr>
-                    """
-
-                stats_table += '</table></div>'
-
-        stats_table += '</div>'
-
-        # Generate full HTML
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>{k}-Fold Cross Validation Results</title>
-            <style>
-                {self._get_css()}
-
-                /* Additional styles for k-fold dashboard */
-                .metrics-container {{
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-                    gap: 20px;
-                    margin: 20px 0;
-                }}
-
-                .metric-section {{
-                    margin-bottom: 40px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <h1>{k}-Fold Cross Validation Results</h1>
-                <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            </div>
-
-            {stats_table}
-
-            <div class="card metric-section">
-                <h2>Individual Fold Performance</h2>
-                <div class="metrics-container">
-        """
-
-        # Add individual fold plots
-        for metric_type, plot_path in plots_info["individual"].items():
-            print(f" plot path individual = {plot_path}")
-            html += f"""
-                <div>
-                    <h3>{metric_type.name.replace("_", " ").title()}</h3>
-                    <img src="{plot_path}" alt="Individual fold {metric_type.name}">
-                </div>
-            """
-
-        html += """
-            </div>
-            </div>
-
-            <div class="card metric-section">
-                <h2>Aggregate Statistics</h2>
-                <div class="metrics-container">
-        """
-
-        for metric_type, plot_path in plots_info["aggregate"].items():
-            html += f"""
-                <div>
-                    <h3>{metric_type.name.replace("_", " ").title()} (Mean ± Std)</h3>
-                    <img src="{plot_path}" alt="Aggregate {metric_type.name}">
-                </div>
-            """
-
-        html += """
-            </div>
-            </div>
-
-            <div class="card metric-section">
-                <h2>Final Metric Distributions</h2>
-                <div class="metrics-container">
-        """
-
-        for metric_type, plot_path in plots_info["boxplots"].items():
-            html += f"""
-                <div>
-                    <h3>{metric_type.name.replace("_", " ").title()} Distribution</h3>
-                    <img src="{plot_path}" alt="Box plot {metric_type.name}">
-                </div>
-            """
-
-        html += "</div></div></body></html>"
-
-        output_path = os.path.join(kfold_dir, "kfold_report.html")
-        with open(output_path, "w") as f:
-            f.write(html)
-
-        return output_path
-
-    def _save_kfold_data(
-            self, results_list: List[Results], fold_stats: Dict, k: int, kfold_dir: str
-    ):
-        """Save k-fold validation data and statistics to JSON."""
-        kfold_data = {
-            "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
-            "k_folds": k,
+        data = {
+            "timestamp": self.timestamp,
+            "config": self._serialize_config(),
             "system_info": self.system_info,
+            "k_fold_context": {
+                "num_folds": k,
+                "total_samples": self.dataset_info.training_size
+                + self.dataset_info.validation_size
+                + self.dataset_info.testing_size,
+                "fold_sizes": {
+                    "training": self.dataset_info.training_size // k,
+                    "validation": self.dataset_info.validation_size // k
+                    if self.dataset_info.validation_size
+                    else 0,
+                    "testing": self.dataset_info.testing_size // k
+                    if self.dataset_info.testing_size
+                    else 0,
+                },
+            },
             "folds": [
-                {
-                    "fold": i + 1,
-                    "results": self._serialize_results(results)
-                }
+                {"fold_index": i, "results": self._serialize_results(results)}
                 for i, results in enumerate(results_list)
             ],
-            "statistics": fold_stats
         }
 
-        with open(os.path.join(kfold_dir, "kfold_data.json"), "w") as f:
-            json.dump
+        with open(os.path.join(self.run_dir, "kfold_data.json"), "w") as f:
+            json.dump(data, f, indent=2)
