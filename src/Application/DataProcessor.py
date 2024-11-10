@@ -4,10 +4,12 @@ import torch
 from torch import nn
 from torch.nn import Module as TorchLoss  # this is the base class for all criteria
 from torch.optim import Optimizer
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 from Application.ClonedAudioDetector import CNNClassifier
 from Core.Metrics import EpochMetrics, MetricType, Results
+from sklearn.model_selection import KFold
+
 
 CType = TypeVar("CType", bound=TorchLoss)
 OType = TypeVar("OType", bound=Optimizer)
@@ -36,6 +38,51 @@ class DataProcessor:
             optimizer,
             self.use_cuda,
         )
+
+    def process_k_fold(
+            self,
+            model_class,
+            dataset: DataLoader,
+            k_folds: int,
+            n_epochs: int,
+            batch_size: int,
+            use_cuda_if_available: bool,
+    ):
+
+        # Initialize k-fold cross-validation
+        kfold = KFold(n_splits=k_folds, shuffle=True)
+        fold_results = []
+
+        for fold, (train_indices, val_indices) in enumerate(kfold.split(dataset)):
+            print(f"Starting fold {fold + 1}/{k_folds}")
+
+            # Create model, optimizer, and data subsets for the current fold
+            model = model_class(3)
+            optimizer = torch.optim.Adadelta(self.model.parameters())
+            train_subset = Subset(dataset, train_indices)
+            val_subset = Subset(dataset, val_indices)
+
+            # Data loaders for the current fold
+            train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+            val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=True)
+
+            criterion = nn.CrossEntropyLoss()
+
+            # Train the model on this fold
+            results = self.train_model(
+                model=model,
+                training_data_loader=train_loader,
+                validation_data_loader=val_loader,
+                n_epochs=n_epochs,
+                criterion=criterion,
+                optimizer=optimizer,
+                use_cuda_if_available=use_cuda_if_available,
+            )
+
+            # Append results for each fold
+            fold_results.append(results)
+        return fold_results
+
 
     def train_model(
         self,

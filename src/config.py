@@ -10,6 +10,7 @@ class AudioClassifierConfig:
     shuffle_batches: bool
     epochs: int
     optimizer: str
+    k_folds: int
 
     # model architecture
     model_name: str
