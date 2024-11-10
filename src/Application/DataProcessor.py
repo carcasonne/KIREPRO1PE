@@ -49,7 +49,6 @@ class DataProcessor:
             use_cuda_if_available: bool,
     ):
 
-        # Initialize k-fold cross-validation
         kfold = KFold(n_splits=k_folds, shuffle=True)
         fold_results = []
 
@@ -59,16 +58,14 @@ class DataProcessor:
             # Create model, optimizer, and data subsets for the current fold
             model = model_class(3)
             optimizer = torch.optim.Adadelta(self.model.parameters())
+            criterion = nn.CrossEntropyLoss()
             train_subset = Subset(dataset, train_indices)
             val_subset = Subset(dataset, val_indices)
 
-            # Data loaders for the current fold
             train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
             val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=True)
 
-            criterion = nn.CrossEntropyLoss()
 
-            # Train the model on this fold
             results = self.train_model(
                 model=model,
                 training_data_loader=train_loader,
@@ -79,7 +76,6 @@ class DataProcessor:
                 use_cuda_if_available=use_cuda_if_available,
             )
 
-            # Append results for each fold
             fold_results.append(results)
         return fold_results
 

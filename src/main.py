@@ -12,7 +12,7 @@ config = AudioClassifierConfig(
     learning_rate=0.5,
     batch_size=16,
     shuffle_batches=True,
-    epochs=3,
+    epochs=1,
     k_folds=2,
     optimizer="Adadelta",
     torch_seed=None,
@@ -55,9 +55,8 @@ testing_data = data_source.get_data_loader(
     DataType.TESTING, config.batch_size, config.shuffle_batches
 )
 
-k_fold_data = data_source.get_k_fold_dataset(
-    config.batch_size, config.shuffle_batches
-)
+k_fold_data = data_source.get_k_fold_dataset()
+
 # Define our classifier network
 classifier = CNNClassifier(no_channels=config.channels)
 
@@ -80,6 +79,6 @@ reporter = TrainingReporter(
 results = data_processor.process_k_fold(CNNClassifier, k_fold_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda)
 
 # Interpret data
-report_path = reporter.generate_report(results[0])
+report_path = reporter.generate_kfold_report(results)
 print(f"Report generated at: {report_path}")
 

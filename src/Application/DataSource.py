@@ -123,7 +123,7 @@ class LocalDataSource:
         )
         return DataLoader(data, batch_size, shuffle)
 
-    def get_k_fold_dataset(self, batch_size: int, shuffle: bool) -> AudioData:
+    def get_k_fold_dataset(self) -> AudioData:
         return AudioDataTotal(
             root_dir=self.root_dir,
             transform=self.transform,
