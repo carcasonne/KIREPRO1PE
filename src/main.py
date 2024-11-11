@@ -13,7 +13,7 @@ config = AudioClassifierConfig(
     batch_size=16,
     shuffle_batches=True,
     epochs=10,
-    k_folds=2,  # if k-folds = None, do not use k-fold method
+    k_folds=5,  # if k-folds = None, do not use k-fold method
     optimizer="Adadelta",
     torch_seed=None,
     # model arch
@@ -28,10 +28,10 @@ config = AudioClassifierConfig(
     img_height=625,
     img_width=469,
     channels=3,
-    duration=1,
+    duration=2,
     # misc
     notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
-    data_path="../audio_files_samples",
+    data_path="../audio_files_fake_from_paper",
     output_path="../output",
     run_cuda=True,
 )
