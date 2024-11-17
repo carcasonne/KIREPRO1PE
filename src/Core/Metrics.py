@@ -8,6 +8,12 @@ class MetricType(Enum):
     ABSOLUTE_LOSS = auto()
     AVERAGE_LOSS = auto()
     ACCURACY = auto()
+    PRECISION = auto()
+    F1_SCORE = auto()
+    TRUE_POSITIVES = auto()
+    TRUE_NEGATIVES = auto()
+    FALSE_POSITIVES = auto()
+    FALSE_NEGATIVES = auto()
 
 
 # This allows for expanding MetricType easily later without any dependencies breaking
@@ -31,3 +37,27 @@ class Results:
     training: List[EpochMetrics] = field(default_factory=list)
     validation: List[EpochMetrics] = field(default_factory=list)
     testing: List[EpochMetrics] = field(default_factory=list)
+
+    def get_present_metrics(self) -> List[MetricType]:
+        """Extract all MetricTypes that are actually present in the Results data."""
+        seen = set()
+        metrics = []
+        for phase in [self.training, self.validation, self.testing]:
+            for epoch in phase:
+                for metric in epoch.metrics:
+                    if metric not in seen:
+                        seen.add(metric)
+                        metrics.append(metric)
+        return metrics
+
+    @staticmethod
+    def get_present_metrics_from_list(results_list: List["Results"]) -> List[MetricType]:
+        """Extract all MetricTypes present across a list of Results instances."""
+        seen = set()
+        metrics = []
+        for results in results_list:
+            for metric in results.get_present_metrics():
+                if metric not in seen:
+                    seen.add(metric)
+                    metrics.append(metric)
+        return metrics

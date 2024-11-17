@@ -9,11 +9,11 @@ from Core.ResultsDashboardGenerator import ColorScheme, TrainingReporter
 
 config = AudioClassifierConfig(
     # core params
-    learning_rate=0.5,
+    learning_rate=None,
     batch_size=16,
     shuffle_batches=True,
-    epochs=1,
-    k_folds=2,
+    epochs=10,
+    k_folds=5,  # if k-folds = None, do not use k-fold method
     optimizer="Adadelta",
     torch_seed=None,
     # model arch
@@ -28,10 +28,10 @@ config = AudioClassifierConfig(
     img_height=625,
     img_width=469,
     channels=3,
-    duration=1,
+    duration=2,
     # misc
     notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
-    data_path="../audio_files_samples",
+    data_path="../audio_files_fake_from_paper",
     output_path="../output",
     run_cuda=True,
 )
@@ -71,14 +71,10 @@ reporter = TrainingReporter(
     base_dir="../training_runs",
 )
 
-# Process data
-# results = data_processor.process(
-#     training_data, testing_data, config.epochs, config.learning_rate
-# )
-
-results = data_processor.process_k_fold(CNNClassifier, k_fold_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda)
+results, complete_time = data_processor.process_k_fold(
+    CNNClassifier, k_fold_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda
+)
 
 # Interpret data
-report_path = reporter.generate_kfold_report(results)
+report_path = reporter.generate_report_k_folds(k_fold_results=results, complete_time=complete_time)
 print(f"Report generated at: {report_path}")
-
