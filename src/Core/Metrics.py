@@ -8,6 +8,12 @@ class MetricType(Enum):
     ABSOLUTE_LOSS = auto()
     AVERAGE_LOSS = auto()
     ACCURACY = auto()
+    PRECISION = auto()
+    F1_SCORE = auto()
+    TRUE_POSITIVES = auto()
+    TRUE_NEGATIVES = auto()
+    FALSE_POSITIVES = auto()
+    FALSE_NEGATIVES = auto()
 
 
 # This allows for expanding MetricType easily later without any dependencies breaking

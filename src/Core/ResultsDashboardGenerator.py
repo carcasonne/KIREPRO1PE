@@ -11,12 +11,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import psutil
 import torch
+from matplotlib.colors import LinearSegmentedColormap
 from torch.utils.data import DataLoader
 
 from config import AudioClassifierConfig
 from Core.Metrics import MetricType, Results
 
 
+# just messing around, easy to add new stuff
 class ColorScheme(Enum):
     LIGHT = auto()
     DARK = auto()
@@ -52,18 +54,124 @@ class DatasetInfo:
 
 class MetricPlotter:
     PHASE_COLORS = {
-        "training": "#2ecc71",  # like Frieren's cloak
-        "validation": "#3498db",  # stark's magic
-        "testing": "#e74c3c",  # demon lord vibes
+        "training": "#2ecc71",
+        "validation": "#3498db",
+        "testing": "#e74c3c",
+    }
+
+    CONFUSION_METRICS = {
+        MetricType.TRUE_POSITIVES,
+        MetricType.TRUE_NEGATIVES,
+        MetricType.FALSE_POSITIVES,
+        MetricType.FALSE_NEGATIVES,
     }
 
     @staticmethod
     def extract_metric_data(results: Results, metric_type: MetricType) -> Dict[str, List[float]]:
+        # special handling for confusion matrix metrics which are integers
+        convert_fn = int if metric_type in MetricPlotter.CONFUSION_METRICS else float
+
         return {
-            "training": [epoch.get_metric(metric_type) for epoch in results.training],
-            "validation": [epoch.get_metric(metric_type) for epoch in results.validation],
-            "testing": [epoch.get_metric(metric_type) for epoch in results.testing],
+            "training": [convert_fn(epoch.get_metric(metric_type)) for epoch in results.training],
+            "validation": [
+                convert_fn(epoch.get_metric(metric_type)) for epoch in results.validation
+            ],
+            "testing": [convert_fn(epoch.get_metric(metric_type)) for epoch in results.testing],
         }
+
+    @staticmethod
+    def plot_confusion_matrix(cm: np.ndarray, title: str, theme: dict) -> plt.Figure:
+        """plots a single confusion matrix using theme colors"""
+        fig = plt.figure(figsize=(8, 6))
+        ax = plt.gca()
+
+        # create a custom colormap from theme colors
+        colors = [theme["bg-secondary"], theme["accent-subtle"], theme["accent"]]
+
+        # convert hex to rgb for colormap
+        rgb_colors = [
+            tuple(int(h.lstrip("#")[i : i + 2], 16) / 255 for i in (0, 2, 4)) for h in colors
+        ]
+
+        custom_cmap = LinearSegmentedColormap.from_list("custom", rgb_colors, N=100)
+
+        # normalize data for better color distribution
+        norm = plt.Normalize(vmin=0, vmax=np.max(cm))
+
+        # plot matrix with custom colormap but don't create colorbar yet
+        im = ax.imshow(cm, interpolation="nearest", cmap=custom_cmap, norm=norm)
+
+        # create a single colorbar with proper styling
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.outline.set_edgecolor(theme["border"])
+        cbar.ax.yaxis.set_tick_params(color=theme["text-secondary"])
+        cbar.ax.yaxis.set_ticks_position("right")  # keep it on the right
+        plt.setp(plt.getp(cbar.ax.axes, "yticklabels"), color=theme["text-secondary"])
+
+        # add value labels to each cell with adaptive color
+        for i in range(2):
+            for j in range(2):
+                color = "white" if cm[i, j] / np.max(cm) > 0.5 else theme["text-primary"]
+                ax.text(
+                    j,
+                    i,
+                    int(cm[i, j]),
+                    ha="center",
+                    va="center",
+                    color=color,
+                    fontsize=12,
+                    fontweight="bold",
+                )
+
+        ax.set_title(title)
+        ax.set_ylabel("True Label")
+        ax.set_xlabel("Predicted Label")
+
+        # add labels
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(["Negative", "Positive"])
+        ax.set_yticks([0, 1])
+        ax.set_yticklabels(["Negative", "Positive"])
+
+        # apply theme
+        ax.set_facecolor(theme["bg-secondary"])
+        fig.set_facecolor(theme["bg-primary"])
+        ax.set_title(ax.get_title(), color=theme["text-primary"])
+        ax.set_xlabel(ax.get_xlabel(), color=theme["text-secondary"])
+        ax.set_ylabel(ax.get_ylabel(), color=theme["text-secondary"])
+        ax.tick_params(colors=theme["text-secondary"])
+
+        return fig
+
+    @staticmethod
+    def get_confusion_matrix_for_phase(results: Results, phase: str) -> np.ndarray:
+        """extracts confusion matrix from final epoch of given phase"""
+        phase_data = getattr(results, phase)[-1]  # get last epoch
+        return np.array(
+            [
+                [
+                    phase_data.get_metric(MetricType.TRUE_NEGATIVES),
+                    phase_data.get_metric(MetricType.FALSE_POSITIVES),
+                ],
+                [
+                    phase_data.get_metric(MetricType.FALSE_NEGATIVES),
+                    phase_data.get_metric(MetricType.TRUE_POSITIVES),
+                ],
+            ]
+        )
+
+    @staticmethod
+    def get_average_confusion_matrix(results_list: List[Results], phase: str) -> np.ndarray:
+        """computes average confusion matrix across all folds for final epoch"""
+        matrices = []
+        for results in results_list:
+            matrices.append(MetricPlotter.get_confusion_matrix_for_phase(results, phase))
+        return np.mean(matrices, axis=0).astype(int)  # average and round to integers
+
+    @staticmethod
+    def should_plot_separately(metric_type: MetricType) -> bool:
+        """determine if metric should be plotted in main graphs"""
+        return metric_type not in MetricPlotter.CONFUSION_METRICS
 
 
 class TrainingReporter:
@@ -108,12 +216,17 @@ class TrainingReporter:
         os.makedirs(self.plot_dir, exist_ok=True)
 
     def _generate_plots(self, results: Results) -> Dict[MetricType, str]:
-        # existing plot generation code remains the same
-        plots_info = {}
+        plots_info = {"metrics": {}, "confusion": []}
+
+        # standard metric plots
         for metric_type in self.metrictypes:
+            if not MetricPlotter.should_plot_separately(metric_type):
+                continue
+
             metric_data = MetricPlotter.extract_metric_data(results, metric_type)
             if not any(len(data) > 0 for data in metric_data.values()):
                 continue
+
             plt.figure(figsize=(10, 6))
             for phase, data in metric_data.items():
                 if len(data) > 0:
@@ -123,16 +236,28 @@ class TrainingReporter:
                         color=MetricPlotter.PHASE_COLORS[phase],
                         alpha=0.8,
                     )
-            plt.title(f'{metric_type.name.replace("_", " ").title()} Over Epochs')
-            plt.xlabel("Epoch")
-            plt.ylabel(metric_type.name.replace("_", " ").title())
-            plt.grid(True, alpha=0.3)
-            plt.legend()
+
+            self.style_plot(f'{metric_type.name.replace("_", " ").title()} Over Epochs')
+
             plot_name = f"{metric_type.name.lower()}.png"
             plot_path = os.path.join(self.plot_dir, plot_name)
-            plt.savefig(plot_path)
+            plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
             plt.close()
-            plots_info[metric_type] = os.path.relpath(plot_path, self.run_dir)
+
+            plots_info["metrics"][metric_type] = os.path.relpath(plot_path, self.run_dir)
+
+        # confusion matrix plots for first and last epoch
+        theme = self._get_theme_css()[self.color_scheme]
+        for phase in ["training", "validation"]:
+            phase_data = getattr(results, phase)
+            if phase_data:
+                # plot first and last epoch
+                for epoch_idx in [0, -1]:
+                    cm_path = MetricPlotter.plot_confusion_matrix(
+                        results, epoch_idx, phase, self.plot_dir, theme
+                    )
+                    plots_info["confusion"].append(cm_path)
+
         return plots_info
 
     def generate_report(self, results: Results, complete_time: float) -> str:
@@ -164,15 +289,20 @@ class TrainingReporter:
         k_fold_plots = None
         k_fold_stats = None
         graphs_metrics_section = None
+        confusion_section = None
 
         if k_fold_results:
             k_fold_plots = self._generate_kfold_plots(k_fold_results, k, self.plot_dir)
             k_fold_stats = self._compute_kfold_statistics(k_fold_results)
             graphs_metrics_section = self._get_k_folds_section_html(k_fold_plots, k_fold_stats)
+            confusion_plots = self._generate_kfold_confusion_matrices(k_fold_results)
+            confusion_section = self._get_confusion_section_html(confusion_plots, is_kfold=True)
         else:
             graphs_metrics_section = self._get_plots_section_html(
                 plots_info
             ) + self._get_metrics_section_html(results)
+            confusion_plots = self._generate_confusion_matrices(results)
+            confusion_section = self._get_confusion_section_html(confusion_plots)
 
         dataloader_section = self._get_dataloader_section_html()
         run_config_section = self._get_config_section_html()
@@ -190,7 +320,7 @@ class TrainingReporter:
                 <div class="card">
                     <h1>Training Run {self.timestamp}</h1>
                     <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                    <p>Color Scheme: {self.color_scheme.name.title}</p>
+                    <p>Color Scheme: {self.color_scheme.display_name}</p>
                     <p>Time to train model: {complete_time/60:.2f} minutes</p>
                 </div>
 
@@ -198,6 +328,7 @@ class TrainingReporter:
                     {dataloader_section}
                     {run_config_section}
                 </div>
+                {confusion_section}
                 {graphs_metrics_section}
             </body>
         </html>
@@ -268,16 +399,28 @@ class TrainingReporter:
             </div>
         """
 
-    def _get_plots_section_html(self, plots_info: Dict[MetricType, str]) -> str:
-        html = '<div class="card"><h2>Training Metrics</h2><div class="metric-grid">'
-        for metric_type, plot_path in plots_info.items():
+    def _get_plots_section_html(self, plots_info: Dict[str, Any]) -> str:
+        html = '<div class="card"><h2>Training Metrics</h2>'
+
+        # standard metrics
+        html += '<div class="metric-grid">'
+        for metric_type, plot_path in plots_info["metrics"].items():
             html += f"""
                 <div>
                     <h3>{metric_type.name.replace("_", " ").title()}</h3>
                     <img src="{plot_path}" alt="{metric_type.name}">
                 </div>
             """
-        html += "</div></div>"
+        html += "</div>"
+
+        # confusion matrices
+        if plots_info["confusion"]:
+            html += '<h2>Confusion Matrices</h2><div class="confusion-grid">'
+            for plot_path in plots_info["confusion"]:
+                html += f'<img src="{plot_path}" alt="Confusion Matrix">'
+            html += "</div>"
+
+        html += "</div>"
         return html
 
     def _get_metrics_section_html(self, results: Results) -> str:
@@ -296,7 +439,7 @@ class TrainingReporter:
                         <tr>
                             <td>{metric_type.name.replace("_", " ").title()}</td>
                             <td>{value:.4f}</td>
-                        </tr>
+                        </tr>c
                     """
                 html += "</table>"
 
@@ -325,9 +468,7 @@ class TrainingReporter:
                             </tr>
                 """
 
-                for metric_type in sorted(
-                    k_fold_stats[phase]["metrics"].keys(), key=lambda x: x.name
-                ):
+                for metric_type in k_fold_stats[phase]["metrics"].keys():
                     metric_stats = k_fold_stats[phase]["metrics"][metric_type]
                     convergence = k_fold_stats[phase]["convergence"][metric_type]
                     stability = k_fold_stats[phase]["stability"][metric_type]
@@ -484,11 +625,15 @@ class TrainingReporter:
     def _generate_kfold_plots(
         self, results_list: List[Results], k: int, plot_dir: str
     ) -> Dict[str, Dict[MetricType, str]]:
-        """Generate plots using theme colors."""
         plots_info = {"by_phase": {}, "aggregate": {}, "boxplots": {}}
+        theme = self._get_theme_css()[self.color_scheme]
         colors = self._get_plot_colors(k)
 
         for metric_type in self.metrictypes:
+            # skip confusion matrix metrics in main plots
+            if not MetricPlotter.should_plot_separately(metric_type):
+                continue
+
             plots_info["by_phase"][metric_type] = {}
 
             # 1. Phase-separated plots
@@ -501,21 +646,16 @@ class TrainingReporter:
 
                     if len(data) > 0:
                         plt.plot(
-                            data,
-                            label=f"Fold {fold_idx + 1}",
-                            color=colors[fold_idx],
-                            alpha=0.8,
+                            data, label=f"Fold {fold_idx + 1}", color=colors[fold_idx], alpha=0.8
                         )
 
                 self.style_plot(
                     f'{phase.capitalize()} {metric_type.name.replace("_", " ").title()}'
                 )
-
                 plot_name = f"{phase}_{metric_type.name.lower()}.png"
                 plot_path = os.path.join(plot_dir, plot_name)
                 plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
                 plt.close()
-
                 plots_info["by_phase"][metric_type][phase] = os.path.relpath(
                     plot_path, self.run_dir
                 )
@@ -528,19 +668,36 @@ class TrainingReporter:
                 for results in results_list:
                     phase_data = getattr(results, phase)
                     if phase_data:
-                        metrics = [epoch.get_metric(metric_type) for epoch in phase_data]
+                        # handle integer metrics properly
+                        convert_fn = (
+                            int if metric_type in MetricPlotter.CONFUSION_METRICS else float
+                        )
+                        metrics = [
+                            convert_fn(epoch.get_metric(metric_type)) for epoch in phase_data
+                        ]
                         epoch_data.append(metrics)
 
                 if epoch_data:
                     max_epochs = max(len(data) for data in epoch_data)
+                    # use appropriate fill value based on metric type
+                    fill_value = 0 if metric_type in MetricPlotter.CONFUSION_METRICS else np.nan
                     padded_data = [
                         np.pad(
-                            data, (0, max_epochs - len(data)), "constant", constant_values=np.nan
+                            data,
+                            (0, max_epochs - len(data)),
+                            "constant",
+                            constant_values=fill_value,
                         )
                         for data in epoch_data
                     ]
-                    mean_curve = np.nanmean(padded_data, axis=0)
-                    std_curve = np.nanstd(padded_data, axis=0)
+
+                    # use nanmean/nanstd for float metrics, regular mean/std for integers
+                    if metric_type in MetricPlotter.CONFUSION_METRICS:
+                        mean_curve = np.mean(padded_data, axis=0)
+                        std_curve = np.std(padded_data, axis=0)
+                    else:
+                        mean_curve = np.nanmean(padded_data, axis=0)
+                        std_curve = np.nanstd(padded_data, axis=0)
 
                     epochs = np.arange(1, max_epochs + 1)
                     plt.plot(
@@ -558,15 +715,13 @@ class TrainingReporter:
                     )
 
             self.style_plot(f'{metric_type.name.replace("_", " ").title()} (Mean ± Std)')
-
             plot_name = f"aggregate_{metric_type.name.lower()}.png"
             plot_path = os.path.join(plot_dir, plot_name)
             plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
             plt.close()
-
             plots_info["aggregate"][metric_type] = os.path.relpath(plot_path, self.run_dir)
 
-            # 3. Box plots
+            # 3. Box plots (similar changes for integer handling)
             plt.figure(figsize=(10, 6))
             final_metrics = {phase: [] for phase in ["training", "validation", "testing"]}
 
@@ -574,15 +729,17 @@ class TrainingReporter:
                 for phase in ["training", "validation", "testing"]:
                     phase_data = getattr(results, phase)
                     if phase_data:
-                        final_metrics[phase].append(phase_data[-1].get_metric(metric_type))
+                        convert_fn = (
+                            int if metric_type in MetricPlotter.CONFUSION_METRICS else float
+                        )
+                        final_metrics[phase].append(
+                            convert_fn(phase_data[-1].get_metric(metric_type))
+                        )
 
             data = [values for values in final_metrics.values() if values]
             labels = [phase.capitalize() for phase, values in final_metrics.items() if values]
 
-            # Style the boxplot
             boxplot = plt.boxplot(data, labels=labels, patch_artist=True)
-
-            # Style each box
             for i, box in enumerate(boxplot["boxes"]):
                 box_color = MetricPlotter.PHASE_COLORS[["training", "validation", "testing"][i]]
                 box.set(facecolor=box_color, alpha=0.3)
@@ -594,13 +751,36 @@ class TrainingReporter:
             self.style_plot(
                 f'Final {metric_type.name.replace("_", " ").title()} Distribution', xlabel="Phase"
             )
-
             plot_name = f"boxplot_{metric_type.name.lower()}.png"
             plot_path = os.path.join(plot_dir, plot_name)
             plt.savefig(plot_path, bbox_inches="tight", facecolor=plt.gcf().get_facecolor())
             plt.close()
-
             plots_info["boxplots"][metric_type] = os.path.relpath(plot_path, self.run_dir)
+
+        # Add confusion matrices for each fold's final epoch
+        for fold_idx, results in enumerate(results_list):
+            for phase in ["training", "validation"]:
+                phase_data = getattr(results, phase)
+                if phase_data:
+                    # get confusion matrix for this fold/phase
+                    cm = MetricPlotter.get_confusion_matrix_for_phase(results, phase)
+
+                    # plot it
+                    fig = MetricPlotter.plot_confusion_matrix(
+                        cm, f"{phase.capitalize()} Confusion Matrix (Fold {fold_idx+1})", theme
+                    )
+
+                    # save it
+                    plot_name = f"confusion_matrix_{phase}_fold_{fold_idx+1}.png"
+                    plot_path = os.path.join(plot_dir, plot_name)
+                    fig.savefig(plot_path, bbox_inches="tight", facecolor=fig.get_facecolor())
+                    plt.close(fig)
+
+                    if "confusion" not in plots_info:
+                        plots_info["confusion"] = []
+                    plots_info["confusion"].append(
+                        (fold_idx, phase, os.path.relpath(plot_path, self.run_dir))
+                    )
 
         return plots_info
 
@@ -644,6 +824,76 @@ class TrainingReporter:
             if len(all_colors) >= k
             else (all_colors * (k // len(all_colors) + 1))[:k]
         )
+
+        def _generate_confusion_matrices(self, results: Results) -> Dict[str, str]:
+            """Generate confusion matrix plots for single training run"""
+            confusion_plots = {}
+            theme = self._get_theme_css()[self.color_scheme]
+
+            for phase in ["training", "validation"]:
+                if hasattr(results, phase) and getattr(results, phase):
+                    cm = MetricPlotter.get_confusion_matrix_for_phase(results, phase)
+
+                    fig = MetricPlotter.plot_confusion_matrix(
+                        cm, f"{phase.capitalize()} Confusion Matrix", theme
+                    )
+
+                    plot_name = f"confusion_matrix_{phase}_final.png"
+                    plot_path = os.path.join(self.plot_dir, plot_name)
+                    fig.savefig(plot_path, bbox_inches="tight", facecolor=fig.get_facecolor())
+                    plt.close(fig)
+
+                    confusion_plots[phase] = os.path.relpath(plot_path, self.run_dir)
+
+            return confusion_plots
+
+    def _generate_kfold_confusion_matrices(self, k_fold_results: List[Results]) -> Dict[str, str]:
+        """Generate averaged confusion matrix plots for k-fold results"""
+        confusion_plots = {}
+        theme = self._get_theme_css()[self.color_scheme]
+
+        for phase in ["training", "validation"]:
+            avg_cm = MetricPlotter.get_average_confusion_matrix(k_fold_results, phase)
+
+            fig = MetricPlotter.plot_confusion_matrix(
+                avg_cm, f"{phase.capitalize()} Confusion Matrix (Averaged Across Folds)", theme
+            )
+
+            plot_name = f"confusion_matrix_{phase}_avg.png"
+            plot_path = os.path.join(self.plot_dir, plot_name)
+            fig.savefig(plot_path, bbox_inches="tight", facecolor=fig.get_facecolor())
+            plt.close(fig)
+
+            confusion_plots[phase] = os.path.relpath(plot_path, self.run_dir)
+
+        return confusion_plots
+
+    def _get_confusion_section_html(
+        self, confusion_plots: Dict[str, str], is_kfold: bool = False
+    ) -> str:
+        """Generate HTML section for confusion matrix visualization"""
+        title = (
+            "Final Confusion Matrices (Averaged Across Folds)"
+            if is_kfold
+            else "Final Confusion Matrices"
+        )
+
+        html = f"""
+            <div class='card'>
+                <h2>{title}</h2>
+                <div class='confusion-grid'>
+        """
+
+        for phase, plot_path in confusion_plots.items():
+            html += f"""
+                <div class='confusion-matrix'>
+                    <h3>{phase.capitalize()} Phase</h3>
+                    <img src='{plot_path}' alt='{phase} confusion matrix'>
+                </div>
+            """
+
+        html += "</div></div>"
+        return html
 
     def _get_theme_css(self) -> str:
         themes = {
@@ -925,7 +1175,39 @@ class TrainingReporter:
             }
         """
 
-        return theme_css + plot_css
+        confusion_css = """
+            .confusion-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin-top: 20px;
+                align-items: start;  /* align items to top */
+            }
+            
+            .confusion-matrix {
+                text-align: center;
+            }
+            
+            .confusion-matrix h3 {
+                margin-bottom: 10px;
+                color: var(--accent);
+            }
+            
+            .confusion-matrix img {
+                max-width: 100%;
+                height: auto;
+                margin: 0 auto;
+            }
+            
+            /* make it stack on mobile */
+            @media (max-width: 768px) {
+                .confusion-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        """
+
+        return theme_css + plot_css + confusion_css
 
     def _serialize_results(self, results: Results) -> Dict[str, Any]:
         return {

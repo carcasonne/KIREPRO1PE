@@ -34,22 +34,12 @@ class CNNClassifier(nn.Module):
         )
 
         # Much smaller fully connected layers
-        self.fc = nn.Sequential(nn.Linear(43008, 512), nn.ReLU(), nn.Linear(512, 2), nn.Softmax(dim=1))
-
+        self.fc = nn.Sequential(
+            nn.Linear(43008, 512), nn.ReLU(), nn.Linear(512, 2), nn.Softmax(dim=1)
+        )
 
     def forward(self, x):
-        # Add activation debugging
-        debug = {}
-
         x = self.conv(x)
-        debug["post_conv_mean"] = x.abs().mean().item()
-        debug["post_conv_std"] = x.std().item()
-
         x = x.view(x.size(0), -1)
-        debug["flattened_shape"] = list(x.shape)
-
         x = self.fc(x)
-        debug["output_mean"] = x.abs().mean().item()
-        debug["output_std"] = x.std().item()
-
-        return x, debug if self.training else x
+        return x
