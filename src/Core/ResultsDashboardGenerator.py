@@ -849,14 +849,15 @@ class TrainingReporter:
 
     def _generate_kfold_confusion_matrices(self, k_fold_results: List[Results]) -> Dict[str, str]:
         """Generate averaged confusion matrix plots for k-fold results"""
-        confusion_plots = {}
+        confusion_plots = {"averaged": {}, "individual": []}
         theme = self._get_theme_css()[self.color_scheme]
 
+        # Generate averaged matrices
         for phase in ["training", "validation"]:
             avg_cm = MetricPlotter.get_average_confusion_matrix(k_fold_results, phase)
 
             fig = MetricPlotter.plot_confusion_matrix(
-                avg_cm, f"{phase.capitalize()} Confusion Matrix (Averaged Across Folds)", theme
+                avg_cm, f"{phase.capitalize()} Confusion Matrix (Averaged)", theme
             )
 
             plot_name = f"confusion_matrix_{phase}_avg.png"
@@ -864,7 +865,26 @@ class TrainingReporter:
             fig.savefig(plot_path, bbox_inches="tight", facecolor=fig.get_facecolor())
             plt.close(fig)
 
-            confusion_plots[phase] = os.path.relpath(plot_path, self.run_dir)
+            confusion_plots["averaged"][phase] = os.path.relpath(plot_path, self.run_dir)
+
+        # Generate individual fold matrices
+        for fold_idx, results in enumerate(k_fold_results):
+            for phase in ["training", "validation"]:
+                if hasattr(results, phase) and getattr(results, phase):
+                    cm = MetricPlotter.get_confusion_matrix_for_phase(results, phase)
+
+                    fig = MetricPlotter.plot_confusion_matrix(
+                        cm, f"{phase.capitalize()} Confusion Matrix (Fold {fold_idx + 1})", theme
+                    )
+
+                    plot_name = f"confusion_matrix_{phase}_fold_{fold_idx + 1}.png"
+                    plot_path = os.path.join(self.plot_dir, plot_name)
+                    fig.savefig(plot_path, bbox_inches="tight", facecolor=fig.get_facecolor())
+                    plt.close(fig)
+
+                    confusion_plots["individual"].append(
+                        (fold_idx, phase, os.path.relpath(plot_path, self.run_dir))
+                    )
 
         return confusion_plots
 
@@ -872,28 +892,85 @@ class TrainingReporter:
         self, confusion_plots: Dict[str, str], is_kfold: bool = False
     ) -> str:
         """Generate HTML section for confusion matrix visualization"""
-        title = (
-            "Final Confusion Matrices (Averaged Across Folds)"
-            if is_kfold
-            else "Final Confusion Matrices"
-        )
-
-        html = f"""
-            <div class='card'>
-                <h2>{title}</h2>
-                <div class='confusion-grid'>
-        """
-
-        for phase, plot_path in confusion_plots.items():
-            html += f"""
-                <div class='confusion-matrix'>
-                    <h3>{phase.capitalize()} Phase</h3>
-                    <img src='{plot_path}' alt='{phase} confusion matrix'>
-                </div>
+        if not is_kfold:
+            # Regular non-k-fold confusion matrix display (unchanged)
+            title = "Final Confusion Matrices"
+            html = f"""
+                <div class='card'>
+                    <h2>{title}</h2>
+                    <div class='confusion-grid'>
             """
 
-        html += "</div></div>"
-        return html
+            for phase, plot_path in confusion_plots.items():
+                html += f"""
+                    <div class='confusion-matrix'>
+                        <h3>{phase.capitalize()} Phase</h3>
+                        <img src='{plot_path}' alt='{phase} confusion matrix'>
+                    </div>
+                """
+
+            html += "</div></div>"
+            return html
+
+        else:
+            # K-fold version
+            html = """
+                <div class='card'>
+                    <h2>Confusion Matrices</h2>
+                    
+                    <!-- Averaged matrices -->
+                    <h3>Averaged Across Folds</h3>
+                    <div class='confusion-grid'>
+            """
+
+            # Add averaged matrices
+            for phase, plot_path in confusion_plots["averaged"].items():
+                html += f"""
+                    <div class='confusion-matrix'>
+                        <h3>{phase.capitalize()} Phase</h3>
+                        <img src='{plot_path}' alt='{phase} average confusion matrix'>
+                    </div>
+                """
+
+            # Add individual fold matrices in paired columns
+            html += """
+                </div>
+                
+                <h3 class='fold-matrices-title'>Individual Fold Results</h3>
+                <div class='fold-pairs'>
+                    <div class='fold-header'>
+                        <div>Training Phase</div>
+                        <div>Validation Phase</div>
+                    </div>
+            """
+
+            # Group plots by fold
+            fold_dict = {}
+            for fold_idx, phase, plot_path in confusion_plots["individual"]:
+                if fold_idx not in fold_dict:
+                    fold_dict[fold_idx] = {}
+                fold_dict[fold_idx][phase] = plot_path
+
+            # Generate rows for each fold
+            for fold_idx in sorted(fold_dict.keys()):
+                html += f"""
+                    <div class='fold-row'>
+                        <h4 class='fold-label'>Fold {fold_idx + 1}</h4>
+                        <div class='fold-pair'>
+                            <div class='confusion-matrix'>
+                                <img src='{fold_dict[fold_idx]["training"]}' 
+                                    alt='fold {fold_idx + 1} training confusion matrix'>
+                            </div>
+                            <div class='confusion-matrix'>
+                                <img src='{fold_dict[fold_idx]["validation"]}' 
+                                    alt='fold {fold_idx + 1} validation confusion matrix'>
+                            </div>
+                        </div>
+                    </div>
+                """
+
+            html += "</div></div>"
+            return html
 
     def _get_theme_css(self) -> str:
         themes = {
@@ -1180,8 +1257,45 @@ class TrainingReporter:
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
                 gap: 20px;
-                margin-top: 20px;
-                align-items: start;  /* align items to top */
+                margin: 20px 0;
+                align-items: start;
+            }
+            
+            .fold-matrices-title {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border);
+            }
+            
+            .fold-pairs {
+                margin: 20px 0;
+            }
+            
+            .fold-header {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 20px;
+                text-align: center;
+                font-weight: bold;
+                color: var(--accent);
+            }
+            
+            .fold-row {
+                margin-bottom: 30px;
+            }
+            
+            .fold-label {
+                color: var(--text-secondary);
+                margin: 0 0 10px 0;
+                text-align: center;
+            }
+            
+            .fold-pair {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                align-items: center;
             }
             
             .confusion-matrix {
@@ -1201,8 +1315,12 @@ class TrainingReporter:
             
             /* make it stack on mobile */
             @media (max-width: 768px) {
-                .confusion-grid {
+                .confusion-grid, .fold-pair, .fold-header {
                     grid-template-columns: 1fr;
+                }
+                
+                .fold-header div:last-child {
+                    margin-top: -15px;  /* reduce space between headers when stacked */
                 }
             }
         """

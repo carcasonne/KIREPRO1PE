@@ -1,0 +1,836 @@
+
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Training Run 20241119_083108</title>
+                <style>
+                    
+            /* theme variables */
+            :root {
+                --bg-primary: #2a2438;
+                --bg-secondary: #352f44;
+                --text-primary: #e9e9e9;
+                --text-secondary: #b9b4c7;
+                --border: #5c5470;
+                --shadow: rgba(42,36,56,0.3);
+                --accent: #9ad0c2;
+                --accent-subtle: #2d2a3b;
+            }
+
+            /* base styles using theme variables */
+            body {
+                font-family: -apple-system, system-ui, BlinkMacSystemFont;
+                max-width: 1600px;
+                margin: 0 auto;
+                padding: 20px;
+                background: var(--bg-primary);
+                color: var(--text-primary);
+            }
+            
+            .card, .config-card {
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                padding: 20px;
+                box-shadow: 0 2px 4px var(--shadow);
+            }
+            
+            .config-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin: 20px 0;
+            }
+            
+            .metric-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            
+            th, td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid var(--border);
+            }
+            
+            th {
+                color: var(--accent);
+                background: var(--accent-subtle);
+            }
+            
+            h1, h2, h3 {
+                color: var(--text-primary);
+                margin-top: 0;
+            }
+            
+            .phase-header {
+                color: var(--text-secondary);
+                font-size: 1.2em;
+                margin-top: 20px;
+            }
+            
+            img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 4px;
+                border: 1px solid var(--border);
+            }
+            
+            .notes {
+                margin-top: 20px;
+                padding: 15px;
+                background: var(--accent-subtle);
+                border-radius: 4px;
+            }
+            
+            /* some subtle hover effects */
+            .config-card:hover {
+                box-shadow: 0 4px 8px var(--shadow);
+                transition: box-shadow 0.3s ease;
+            }
+            
+            tr:hover {
+                background: var(--accent-subtle);
+                transition: background 0.2s ease;
+            }
+        
+            .plots-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 30px;
+                margin: 20px 0;
+            }
+
+            .plot-section {
+                margin-bottom: 20px;
+            }
+
+            .metrics-container {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .metric-row {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                width: 100%;
+            }
+
+            .summary-plots {
+                grid-template-columns: repeat(2, 1fr);
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border);
+            }
+
+            .metric-item {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .metric-item h3 {
+                margin: 0;
+                font-size: 1.1em;
+                color: var(--accent);
+                text-align: center;
+            }
+
+            .metric-item img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 1400px) {
+                .metric-row {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            @media (max-width: 900px) {
+                .metric-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+        
+            .confusion-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin: 20px 0;
+                align-items: start;
+            }
+            
+            .fold-matrices-title {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border);
+            }
+            
+            .fold-pairs {
+                margin: 20px 0;
+            }
+            
+            .fold-header {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 20px;
+                text-align: center;
+                font-weight: bold;
+                color: var(--accent);
+            }
+            
+            .fold-row {
+                margin-bottom: 30px;
+            }
+            
+            .fold-label {
+                color: var(--text-secondary);
+                margin: 0 0 10px 0;
+                text-align: center;
+            }
+            
+            .fold-pair {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                align-items: center;
+            }
+            
+            .confusion-matrix {
+                text-align: center;
+            }
+            
+            .confusion-matrix h3 {
+                margin-bottom: 10px;
+                color: var(--accent);
+            }
+            
+            .confusion-matrix img {
+                max-width: 100%;
+                height: auto;
+                margin: 0 auto;
+            }
+            
+            /* make it stack on mobile */
+            @media (max-width: 768px) {
+                .confusion-grid, .fold-pair, .fold-header {
+                    grid-template-columns: 1fr;
+                }
+                
+                .fold-header div:last-child {
+                    margin-top: -15px;  /* reduce space between headers when stacked */
+                }
+            }
+        
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>Training Run 20241119_083108</h1>
+                    <p>Generated on 2024-11-19 08:31:14</p>
+                    <p>Color Scheme: Frieren</p>
+                    <p>Time to train model: 0.17 minutes</p>
+                </div>
+
+                <div class="config-grid">
+                    
+            <div class="config-card">
+                <h2>DataLoader Configuration</h2>
+                <table>
+                    <tr><th colspan="2">Dataset Information</th></tr>
+                    <tr><td>Training Set Size</td><td>1,000 samples</td></tr>
+                    <tr><td>Validation Set Size</td><td>200 samples</td></tr>
+                    <tr><td>Testing Set Size</td><td>100 samples</td></tr>
+                    <tr><td>Total Dataset Size</td>
+                        <td>1,300 samples</td></tr>
+                    
+                    <tr><th colspan="2">Batch Processing</th></tr>
+                    <tr><td>Batch Size</td><td>16</td></tr>
+                    <tr><td>Shuffle Enabled</td><td>True</td></tr>
+                    <tr><td>Training Batches</td><td>62</td></tr>
+                    <tr><td>K Folds</td><td>5</td></tr>
+                    
+                    <tr><th colspan="2">Audio Processing</th></tr>
+                    <tr><td>Sample Rate</td><td>16000 Hz</td></tr>
+                    <tr><td>Duration</td><td>1 seconds</td></tr>
+                    
+                    <tr><th colspan="2">Spectogram Configuration</th></tr>
+                    <tr><td>Image Dimensions</td><td>625x469</td></tr>
+                    <tr><td>Channels</td><td>3</td></tr>
+                    <tr><td>Pixels per Sample</td>
+                        <td>879,375</td></tr>
+                </table>
+            </div>
+        
+                    
+            <div class="config-card">
+                <h2>Run Configuration</h2>
+                <table>
+                    <tr><th colspan="2">Training Parameters</th></tr>
+                    <tr><td>Learning Rate</td><td>0.001</td></tr>
+                    <tr><td>Optimizer</td><td>Adadelta</td></tr>
+                    <tr><td>Torch Seed</td><td>42</td></tr>
+                    <tr><td>Epochs</td><td>10</td></tr>
+                    
+                    <tr><th colspan="2">Model Architecture</th></tr>
+                    <tr><td>Model</td><td>CNN Classifier from Paper</td></tr>
+                    <tr><td>Hidden Dims</td><td>[256, 128, 64]</td></tr>
+                    <tr><td>Activation</td><td>gelu</td></tr>
+                    
+                    <tr><th colspan="2">Regularization</th></tr>
+                    <tr><td>Dropout</td><td>0.1</td></tr>
+                    <tr><td>Weight Decay</td><td>0</td></tr>
+
+                    <tr><th colspan="2">System Info</th></tr>
+                    <tr><td>Device</td><td>NVIDIA GeForce RTX 3070</td></tr><tr><td>Cuda Version</td><td>12.4</td></tr><tr><td>Torch Version</td><td>2.5.0+cu124</td></tr><tr><td>Ram</td><td>31.1GB</td></tr><tr><td>Platform</td><td>Linux-6.11.8-arch1-2-x86_64-with-glibc2.40</td></tr><tr><td>Python Version</td><td>3.12.7</td></tr>
+                </table>
+                
+                <div class="notes"><h3>Notes</h3><p>Testing dashboard generation with simulated data including confusion matrices</p></div>
+            </div>
+        
+                </div>
+                
+                <div class='card'>
+                    <h2>Confusion Matrices</h2>
+                    
+                    <!-- Averaged matrices -->
+                    <h3>Averaged Across Folds</h3>
+                    <div class='confusion-grid'>
+            
+                    <div class='confusion-matrix'>
+                        <h3>Training Phase</h3>
+                        <img src='plots/confusion_matrix_training_avg.png' alt='training average confusion matrix'>
+                    </div>
+                
+                    <div class='confusion-matrix'>
+                        <h3>Validation Phase</h3>
+                        <img src='plots/confusion_matrix_validation_avg.png' alt='validation average confusion matrix'>
+                    </div>
+                
+                </div>
+                
+                <h3 class='fold-matrices-title'>Individual Fold Results</h3>
+                <div class='fold-pairs'>
+                    <div class='fold-header'>
+                        <div>Training Phase</div>
+                        <div>Validation Phase</div>
+                    </div>
+            
+                    <div class='fold-row'>
+                        <h4 class='fold-label'>Fold 1</h4>
+                        <div class='fold-pair'>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_training_fold_1.png' 
+                                    alt='fold 1 training confusion matrix'>
+                            </div>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_validation_fold_1.png' 
+                                    alt='fold 1 validation confusion matrix'>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class='fold-row'>
+                        <h4 class='fold-label'>Fold 2</h4>
+                        <div class='fold-pair'>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_training_fold_2.png' 
+                                    alt='fold 2 training confusion matrix'>
+                            </div>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_validation_fold_2.png' 
+                                    alt='fold 2 validation confusion matrix'>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class='fold-row'>
+                        <h4 class='fold-label'>Fold 3</h4>
+                        <div class='fold-pair'>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_training_fold_3.png' 
+                                    alt='fold 3 training confusion matrix'>
+                            </div>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_validation_fold_3.png' 
+                                    alt='fold 3 validation confusion matrix'>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class='fold-row'>
+                        <h4 class='fold-label'>Fold 4</h4>
+                        <div class='fold-pair'>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_training_fold_4.png' 
+                                    alt='fold 4 training confusion matrix'>
+                            </div>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_validation_fold_4.png' 
+                                    alt='fold 4 validation confusion matrix'>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class='fold-row'>
+                        <h4 class='fold-label'>Fold 5</h4>
+                        <div class='fold-pair'>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_training_fold_5.png' 
+                                    alt='fold 5 training confusion matrix'>
+                            </div>
+                            <div class='confusion-matrix'>
+                                <img src='plots/confusion_matrix_validation_fold_5.png' 
+                                    alt='fold 5 validation confusion matrix'>
+                            </div>
+                        </div>
+                    </div>
+                </div></div>
+                <div class="card"><h2>Cross Validation Statistics</h2><h3>Training Statistics</h3>
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Mean</th>
+                                <th>Std Dev</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>Convergence (epochs)</th>
+                                <th>Stability</th>
+                            </tr>
+                
+                        <tr>
+                            <td>Average Loss</td>
+                            <td>0.1549</td>
+                            <td>0.0446</td>
+                            <td>0.0977</td>
+                            <td>0.2136</td>
+                            <td>9.6 ± 0.5</td>
+                            <td>5.06e-03 ± 2.53e-03</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>0.9272</td>
+                            <td>0.0179</td>
+                            <td>0.9010</td>
+                            <td>0.9480</td>
+                            <td>9.8 ± 0.4</td>
+                            <td>8.27e-04 ± 4.30e-04</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Precision</td>
+                            <td>0.9260</td>
+                            <td>0.0101</td>
+                            <td>0.9122</td>
+                            <td>0.9374</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>6.93e-04 ± 3.52e-04</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>F1 Score</td>
+                            <td>0.9262</td>
+                            <td>0.0165</td>
+                            <td>0.9023</td>
+                            <td>0.9464</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>7.75e-04 ± 3.58e-04</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>True Positives</td>
+                            <td>454.4000</td>
+                            <td>8.0399</td>
+                            <td>442.0000</td>
+                            <td>465.0000</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>2.41e+02 ± 1.27e+02</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>True Negatives</td>
+                            <td>472.8000</td>
+                            <td>21.7752</td>
+                            <td>444.0000</td>
+                            <td>496.0000</td>
+                            <td>1.2 ± 0.4</td>
+                            <td>5.43e+02 ± 3.77e+02</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>False Positives</td>
+                            <td>36.4000</td>
+                            <td>5.6780</td>
+                            <td>30.0000</td>
+                            <td>44.0000</td>
+                            <td>9.8 ± 0.4</td>
+                            <td>1.87e+02 ± 1.19e+02</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>False Negatives</td>
+                            <td>36.4000</td>
+                            <td>12.4193</td>
+                            <td>21.0000</td>
+                            <td>55.0000</td>
+                            <td>9.2 ± 1.2</td>
+                            <td>2.73e+02 ± 1.60e+02</td>
+                        </tr>
+                    </table></div><h3>Validation Statistics</h3>
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Mean</th>
+                                <th>Std Dev</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>Convergence (epochs)</th>
+                                <th>Stability</th>
+                            </tr>
+                
+                        <tr>
+                            <td>Average Loss</td>
+                            <td>0.2226</td>
+                            <td>0.0334</td>
+                            <td>0.1790</td>
+                            <td>0.2650</td>
+                            <td>9.0 ± 0.6</td>
+                            <td>9.20e-03 ± 2.86e-03</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>0.8750</td>
+                            <td>0.0351</td>
+                            <td>0.8300</td>
+                            <td>0.9350</td>
+                            <td>8.8 ± 1.2</td>
+                            <td>1.10e-03 ± 4.98e-04</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Precision</td>
+                            <td>0.8608</td>
+                            <td>0.0414</td>
+                            <td>0.8073</td>
+                            <td>0.9298</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>2.16e-03 ± 2.25e-03</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>F1 Score</td>
+                            <td>0.8743</td>
+                            <td>0.0363</td>
+                            <td>0.8381</td>
+                            <td>0.9422</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>1.17e-03 ± 9.30e-04</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>True Positives</td>
+                            <td>88.2000</td>
+                            <td>9.5163</td>
+                            <td>78.0000</td>
+                            <td>106.0000</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>6.51e+01 ± 5.72e+01</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>True Negatives</td>
+                            <td>86.8000</td>
+                            <td>7.0824</td>
+                            <td>78.0000</td>
+                            <td>96.0000</td>
+                            <td>1.2 ± 0.4</td>
+                            <td>6.53e+01 ± 2.31e+01</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>False Positives</td>
+                            <td>14.2000</td>
+                            <td>4.5343</td>
+                            <td>8.0000</td>
+                            <td>21.0000</td>
+                            <td>8.2 ± 1.3</td>
+                            <td>2.27e+01 ± 1.94e+01</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>False Negatives</td>
+                            <td>10.8000</td>
+                            <td>3.4871</td>
+                            <td>5.0000</td>
+                            <td>15.0000</td>
+                            <td>8.0 ± 1.4</td>
+                            <td>1.85e+01 ± 7.09e+00</td>
+                        </tr>
+                    </table></div><h3>Testing Statistics</h3>
+                    <div class="table-container">
+                        <table>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Mean</th>
+                                <th>Std Dev</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>Convergence (epochs)</th>
+                                <th>Stability</th>
+                            </tr>
+                
+                        <tr>
+                            <td>Average Loss</td>
+                            <td>0.1495</td>
+                            <td>0.0527</td>
+                            <td>0.0512</td>
+                            <td>0.2011</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>0.8700</td>
+                            <td>0.0303</td>
+                            <td>0.8300</td>
+                            <td>0.9200</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Precision</td>
+                            <td>0.8595</td>
+                            <td>0.0467</td>
+                            <td>0.7843</td>
+                            <td>0.9298</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>F1 Score</td>
+                            <td>0.8704</td>
+                            <td>0.0362</td>
+                            <td>0.8247</td>
+                            <td>0.9298</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>True Positives</td>
+                            <td>44.6000</td>
+                            <td>5.1225</td>
+                            <td>40.0000</td>
+                            <td>53.0000</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>True Negatives</td>
+                            <td>42.4000</td>
+                            <td>2.8000</td>
+                            <td>39.0000</td>
+                            <td>47.0000</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>False Positives</td>
+                            <td>7.2000</td>
+                            <td>2.3152</td>
+                            <td>4.0000</td>
+                            <td>11.0000</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>False Negatives</td>
+                            <td>5.8000</td>
+                            <td>1.8330</td>
+                            <td>4.0000</td>
+                            <td>9.0000</td>
+                            <td>1.0 ± 0.0</td>
+                            <td>0.00e+00 ± 0.00e+00</td>
+                        </tr>
+                    </table></div></div><div class="plots-grid">
+                <div class="card plot-section">
+                    <h2>Average Loss</h2>
+                    <div class="metrics-container">
+                        <div class="metric-row">
+            
+                        <div class="metric-item">
+                            <h3>Training</h3>
+                            <img src="plots/training_average_loss.png" 
+                                alt="training AVERAGE_LOSS">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Validation</h3>
+                            <img src="plots/validation_average_loss.png" 
+                                alt="validation AVERAGE_LOSS">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Testing</h3>
+                            <img src="plots/testing_average_loss.png" 
+                                alt="testing AVERAGE_LOSS">
+                        </div>
+                    
+                        </div>
+                        <div class="metric-row summary-plots">
+                            <div class="metric-item">
+                                <h3>Aggregate Statistics</h3>
+                                <img src="plots/aggregate_average_loss.png" 
+                                    alt="Aggregate AVERAGE_LOSS">
+                            </div>
+                            <div class="metric-item">
+                                <h3>Distribution</h3>
+                                <img src="plots/boxplot_average_loss.png" 
+                                    alt="Box plot AVERAGE_LOSS">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="card plot-section">
+                    <h2>Accuracy</h2>
+                    <div class="metrics-container">
+                        <div class="metric-row">
+            
+                        <div class="metric-item">
+                            <h3>Training</h3>
+                            <img src="plots/training_accuracy.png" 
+                                alt="training ACCURACY">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Validation</h3>
+                            <img src="plots/validation_accuracy.png" 
+                                alt="validation ACCURACY">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Testing</h3>
+                            <img src="plots/testing_accuracy.png" 
+                                alt="testing ACCURACY">
+                        </div>
+                    
+                        </div>
+                        <div class="metric-row summary-plots">
+                            <div class="metric-item">
+                                <h3>Aggregate Statistics</h3>
+                                <img src="plots/aggregate_accuracy.png" 
+                                    alt="Aggregate ACCURACY">
+                            </div>
+                            <div class="metric-item">
+                                <h3>Distribution</h3>
+                                <img src="plots/boxplot_accuracy.png" 
+                                    alt="Box plot ACCURACY">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="card plot-section">
+                    <h2>Precision</h2>
+                    <div class="metrics-container">
+                        <div class="metric-row">
+            
+                        <div class="metric-item">
+                            <h3>Training</h3>
+                            <img src="plots/training_precision.png" 
+                                alt="training PRECISION">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Validation</h3>
+                            <img src="plots/validation_precision.png" 
+                                alt="validation PRECISION">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Testing</h3>
+                            <img src="plots/testing_precision.png" 
+                                alt="testing PRECISION">
+                        </div>
+                    
+                        </div>
+                        <div class="metric-row summary-plots">
+                            <div class="metric-item">
+                                <h3>Aggregate Statistics</h3>
+                                <img src="plots/aggregate_precision.png" 
+                                    alt="Aggregate PRECISION">
+                            </div>
+                            <div class="metric-item">
+                                <h3>Distribution</h3>
+                                <img src="plots/boxplot_precision.png" 
+                                    alt="Box plot PRECISION">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="card plot-section">
+                    <h2>F1 Score</h2>
+                    <div class="metrics-container">
+                        <div class="metric-row">
+            
+                        <div class="metric-item">
+                            <h3>Training</h3>
+                            <img src="plots/training_f1_score.png" 
+                                alt="training F1_SCORE">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Validation</h3>
+                            <img src="plots/validation_f1_score.png" 
+                                alt="validation F1_SCORE">
+                        </div>
+                    
+                        <div class="metric-item">
+                            <h3>Testing</h3>
+                            <img src="plots/testing_f1_score.png" 
+                                alt="testing F1_SCORE">
+                        </div>
+                    
+                        </div>
+                        <div class="metric-row summary-plots">
+                            <div class="metric-item">
+                                <h3>Aggregate Statistics</h3>
+                                <img src="plots/aggregate_f1_score.png" 
+                                    alt="Aggregate F1_SCORE">
+                            </div>
+                            <div class="metric-item">
+                                <h3>Distribution</h3>
+                                <img src="plots/boxplot_f1_score.png" 
+                                    alt="Box plot F1_SCORE">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </body>
+        </html>
+        
