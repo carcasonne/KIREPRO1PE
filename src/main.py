@@ -31,7 +31,8 @@ config = AudioClassifierConfig(
     duration=2,
     # misc
     notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
-    data_path="../audio_files_fake_from_paper",
+    data_path="../audio_files/for-2sec/for-2seconds",
+    #data_path="../audio_files_fake_from_paper",
     output_path="../output",
     run_cuda=True,
 )
@@ -55,7 +56,8 @@ testing_data = data_source.get_data_loader(
     DataType.TESTING, config.batch_size, config.shuffle_batches
 )
 
-k_fold_data = data_source.get_k_fold_dataset()
+#k_fold_data = data_source.get_k_fold_dataset()
+k_fold_data = data_source.get_k_fold_limited_dataset(200)
 
 # Define our classifier network
 classifier = CNNClassifier(no_channels=config.channels)
@@ -71,9 +73,15 @@ reporter = TrainingReporter(
     base_dir="../training_runs",
 )
 
-results, complete_time = data_processor.process_k_fold(
+results, complete_time, models = data_processor.process_k_fold(
     CNNClassifier, k_fold_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda
 )
+
+data_processor.save_kfold_models(models)
+
+# Example model load
+# model = data_processor.load_model("../models/fold_0_20241121_144205.pth", model_type=CNNClassifier)
+# print(model.state_dict().keys())
 
 # Interpret data
 report_path = reporter.generate_report_k_folds(k_fold_results=results, complete_time=complete_time)

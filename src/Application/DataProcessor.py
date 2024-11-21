@@ -1,6 +1,9 @@
 import json
+import os
 import time
 from typing import List, TypeVar
+from datetime import datetime
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -77,10 +80,10 @@ class DataProcessor:
         n_epochs: int,
         batch_size: int,
         use_cuda_if_available: bool,
-    ) -> tuple[List[Results], float]:
+    ) -> tuple[List[Results], float, List[CNNClassifier]]:
         kfold = KFold(n_splits=k_folds, shuffle=True)
         fold_results = []
-
+        models = []
         start = time.perf_counter()
 
         for fold, (train_indices, val_indices) in enumerate(kfold.split(dataset)):
@@ -107,23 +110,23 @@ class DataProcessor:
                 optimizer=optimizer,
                 use_cuda_if_available=use_cuda_if_available,
             )
-
+            models.append(model)
             fold_results.append(results)
 
         end = time.perf_counter()
         complete_time = end - start
 
-        return fold_results, complete_time
+        return fold_results, complete_time, models
 
     def train_model(
-        self,
-        model: CNNClassifier,
-        training_data_loader: DataLoader,
-        validation_data_loader: DataLoader,
-        n_epochs: int,
-        criterion: CType,
-        optimizer: OType,
-        use_cuda_if_available: bool,
+            self,
+            model: CNNClassifier,
+            training_data_loader: DataLoader,
+            validation_data_loader: DataLoader,
+            n_epochs: int,
+            criterion: CType,
+            optimizer: OType,
+            use_cuda_if_available: bool,
     ) -> Results:
         """trains a cnn classifier on given data and returns results"""
         device = "cpu"
@@ -142,7 +145,7 @@ class DataProcessor:
             all_training_preds = []
             all_training_labels = []
 
-            for batch_idx, (images, labels) in enumerate(training_data_loader):
+            for images, labels in tqdm(training_data_loader, desc=f"Epoch {epoch + 1} Training"):
                 images, labels = images.to(device), labels.to(device)
 
                 optimizer.zero_grad()
@@ -172,8 +175,9 @@ class DataProcessor:
             validation_loss = 0.0
             all_validation_preds = []
             all_validation_labels = []
+
             with torch.no_grad():
-                for batch_idx, (images, labels) in enumerate(validation_data_loader):
+                for images, labels in tqdm(validation_data_loader, desc=f"Epoch {epoch + 1} Validation"):
                     images, labels = images.to(device), labels.to(device)
                     outputs = model(images)
                     loss = criterion(outputs, labels)
@@ -194,6 +198,23 @@ class DataProcessor:
             results.validation.append(validation_metrics)
 
         return results
+
+    def save_kfold_models(self, models):
+        for i in range(len(models)):
+            self.save_model(models[i], f"fold_{i + 1}")
+
+    def save_model(self, model, name):
+        save_path = "../models"
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(save_path, f"{name}_{timestamp}.pth")
+        torch.save(model.state_dict(), path)
+
+    @staticmethod
+    def load_model(path, model_type):
+        model = model_type(3)
+        model.load_state_dict(torch.load(path))
+        return model
 
     def get_training_metrics(
         self, absolute_loss: float, predicted: torch.Tensor, labels: torch.Tensor, data_size: float
