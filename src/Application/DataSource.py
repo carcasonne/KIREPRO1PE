@@ -105,6 +105,34 @@ class AudioDataTotal(AudioData):
                     file_path = os.path.join(class_path, file_name)
                     self.files.append((file_path, label.value))
 
+# Creates a dataset combining samples from training, testing and validation
+# needed for k_fold validation
+class AudioDataTotalLimited(AudioData):
+    def __init__(
+            self,
+            root_dir: str,
+            transform,
+            sample_rate: int,
+            audio_duration_seconds: int,
+            max_samples_per_class: int = 200  # Limit for samples per directory; Total is max * 6
+    ):
+        self.transform = transform
+        self.sample_rate = sample_rate
+        self.audio_duration_seconds = audio_duration_seconds
+        self.files = []
+
+        for top_level in os.listdir(root_dir):
+            top_level_path = os.path.join(root_dir, top_level)
+
+            for label in AudioLabel:
+                class_path = os.path.join(top_level_path, label.name.lower())
+                files_in_class = os.listdir(class_path)
+
+                # Limit the number of files to max_samples_per_class
+                limited_files = files_in_class[:max_samples_per_class]
+                for file_name in limited_files:
+                    file_path = os.path.join(class_path, file_name)
+                    self.files.append((file_path, label.value))
 
 class LocalDataSource:
     def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
@@ -129,4 +157,12 @@ class LocalDataSource:
             transform=self.transform,
             sample_rate=self.sample_rate,
             audio_duration_seconds=self.audio_duration_seconds,
+        )
+    def get_k_fold_limited_dataset(self, max_samples) -> AudioData:
+        return AudioDataTotalLimited(
+            root_dir=self.root_dir,
+            transform=self.transform,
+            sample_rate=self.sample_rate,
+            audio_duration_seconds=self.audio_duration_seconds,
+            max_samples_per_class=max_samples,
         )
