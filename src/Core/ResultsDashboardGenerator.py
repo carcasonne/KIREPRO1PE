@@ -201,7 +201,7 @@ class TrainingReporter:
         }
 
         self.dataset_info = DatasetInfo(
-            training_size=len(training_data.dataset),
+            training_size=len(training_data.dataset) if training_data else 0,
             validation_size=len(validation_data.dataset) if validation_data else 0,
             testing_size=len(testing_data.dataset) if testing_data else 0,
             batch_size=config.batch_size,

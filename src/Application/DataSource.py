@@ -15,6 +15,9 @@ class AudioLabel(Enum):
     FAKE = 0
     REAL = 1
 
+class ArabAudioLabel(Enum):
+    Imitators = 0
+    Reciters = 1
 
 class AudioData(Dataset):
     def __init__(
@@ -134,6 +137,92 @@ class AudioDataTotalLimited(AudioData):
                     file_path = os.path.join(class_path, file_name)
                     self.files.append((file_path, label.value))
 
+class ASVSpoofDataset(AudioData):
+    def __init__(
+        self,
+        root_dir: str,               # Root directory of the AVSpoof dataset
+        bonafide_keys_path: str,     # Path to the "keys/bonafide" file
+        fake_keys_path: str,         # Path to the "keys/fake" file
+        transform=None,              # Transform to apply to the audio data
+        sample_rate: int = 16000,    # Desired sample rate for audio
+        audio_duration_seconds: int = 2,  # Duration of audio clips in seconds
+        max_samples_per_class: int = 500  # Limit for samples per class
+    ):
+        """
+        Initializes the dataset, loading file paths and labels from the keys.
+
+        Args:
+            root_dir (str): Root directory where the audio files are stored.
+            bonafide_keys_path (str): Path to the file containing bonafide sample names.
+            fake_keys_path (str): Path to the file containing fake sample names.
+            transform (callable, optional): A function/transform to apply to audio data.
+            sample_rate (int, optional): Target sample rate for audio data.
+            audio_duration_seconds (int, optional): Duration of audio clips to load.
+            max_samples_per_class (int, optional): Maximum number of samples per class.
+        """
+        self.root_dir = root_dir
+        self.transform = transform
+        self.sample_rate = sample_rate
+        self.audio_duration_seconds = audio_duration_seconds
+        self.max_samples_per_class = max_samples_per_class
+
+        # Load bonafide and fake sample names
+        with open(bonafide_keys_path, 'r') as f:
+            bonafide_samples = f.read().strip().split("\n")
+        with open(fake_keys_path, 'r') as f:
+            fake_samples = f.read().strip().split("\n")
+
+        # Apply the max_samples_per_class limit
+        bonafide_samples = bonafide_samples[:max_samples_per_class]
+        fake_samples = fake_samples[:max_samples_per_class]
+
+        # Assign labels: 1 for bonafide, 0 for fake
+        self.files = [(os.path.join(root_dir, sample + ".flac"), 1) for sample in bonafide_samples] + \
+                    [(os.path.join(root_dir, sample + ".flac"), 0) for sample in fake_samples]
+
+class ARABAudioData(AudioData):
+    def __init__(
+        self,
+        root_dir: str,
+        transform,
+        sample_rate: int,
+        audio_duration_seconds: int,
+        max_samples_per_class: int = 380
+    ):
+        self.transform = transform
+        self.sample_rate = sample_rate
+        self.audio_duration_seconds = audio_duration_seconds
+        self.files = []
+        self.counter = 0
+
+        # Just hardcode this shit, dataset has sussy structure
+        class_path = os.path.join(root_dir, "Imitators")
+        files_in_class = os.listdir(class_path)
+        limited_files = files_in_class[:max_samples_per_class]
+        for file_name in limited_files:
+            file_path = os.path.join(class_path, file_name)
+            self.files.append((file_path, 0))
+
+        class_path = os.path.join(root_dir, "Reciters")
+        dir_in_class = os.listdir(class_path)
+
+        for dir in dir_in_class:
+            path = os.path.join(class_path, dir)
+            dirs_in_class = os.listdir(path)
+
+            for dirs in dirs_in_class:
+                dir2 = os.path.join(path, dirs)
+                files_in_class = os.listdir(dir2)
+
+                for file_name in files_in_class:
+                    file_path = os.path.join(dir2, file_name)
+                    if self.counter < max_samples_per_class:
+                        self.counter += 1
+                        self.files.append((file_path, 1))
+                    else:
+                        break
+
+
 class LocalDataSource:
     def __init__(self, root_dir: str, sample_rate: int, audio_duration_seconds: int, transform):
         self.root_dir = root_dir
@@ -166,3 +255,49 @@ class LocalDataSource:
             audio_duration_seconds=self.audio_duration_seconds,
             max_samples_per_class=max_samples,
         )
+
+    def get_ASV_dataset(self, max_samples) -> AudioData:
+        return ASVSpoofDataset(
+            root_dir=self.root_dir,
+            bonafide_keys_path="../keys/bonafide",
+            fake_keys_path="../keys/fake",
+            transform=self.transform,
+            sample_rate=self.sample_rate,
+            audio_duration_seconds=self.audio_duration_seconds,
+            max_samples_per_class=max_samples,
+        )
+
+    def get_ARAB_dataset(self, max_samples) -> AudioData:
+        return ARABAudioData(
+            root_dir=self.root_dir,
+            transform=self.transform,
+            sample_rate=self.sample_rate,
+            audio_duration_seconds=self.audio_duration_seconds,
+            max_samples_per_class=max_samples,
+        )
+
+    @staticmethod
+    def process_keys(in_path, out_path):
+        bonafide_samples = []
+        fake_samples = []
+        os.makedirs(out_path, exist_ok=True)
+
+        with open(in_path, 'r') as file:
+            lines = file.readlines()
+
+            for line in lines:
+                if line.strip():
+                    columns = line.split()
+                    # Check if the second-to-last column is 'bonafide'
+                    if "bonafide" in line:
+                        bonafide_samples.append(columns[1])  # Append the sample name (second column)
+                    elif "spoof" in line:
+                        fake_samples.append(columns[1])
+
+        with open(os.path.join(out_path, "bonafide"), 'w') as file:
+            for sample in bonafide_samples:
+                file.write(sample + '\n')
+
+        with open(os.path.join(out_path, "fake"), 'w') as file:
+            for sample in fake_samples:
+                file.write(sample + '\n')

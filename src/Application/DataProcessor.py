@@ -207,7 +207,7 @@ class DataProcessor:
         save_path = "../models"
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.join(save_path, f"{name}_{timestamp}.pth")
+        path = os.path.join(save_path, f"{timestamp}_{name}.pth")
         torch.save(model.state_dict(), path)
 
     @staticmethod
