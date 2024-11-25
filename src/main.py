@@ -31,7 +31,7 @@ config = AudioClassifierConfig(
     duration=2,
     # misc
     notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
-    data_path="../audio_files/for-2sec/for-2seconds",
+    data_path="../Ar-DAD_Arabic_Diversified",
     #data_path="../audio_files_fake_from_paper",
     output_path="../output",
     run_cuda=True,
@@ -45,19 +45,12 @@ transform_normalization = transforms.Compose(
 data_source = LocalDataSource(
     config.data_path, config.sample_rate, config.duration, transform_normalization
 )
+ASV_data = data_source.get_ARAB_dataset(380)
 
-training_data = data_source.get_data_loader(
-    DataType.TRAINING, config.batch_size, config.shuffle_batches
-)
-validation_data = data_source.get_data_loader(
-    DataType.VALIDATION, config.batch_size, config.shuffle_batches
-)
-testing_data = data_source.get_data_loader(
-    DataType.TESTING, config.batch_size, config.shuffle_batches
-)
-
-#k_fold_data = data_source.get_k_fold_dataset()
-k_fold_data = data_source.get_k_fold_limited_dataset(200)
+# Scuffed but cba fixing
+training_data = None
+validation_data = None
+testing_data = None
 
 # Define our classifier network
 classifier = CNNClassifier(no_channels=config.channels)
@@ -74,7 +67,7 @@ reporter = TrainingReporter(
 )
 
 results, complete_time, models = data_processor.process_k_fold(
-    CNNClassifier, k_fold_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda
+    CNNClassifier, ASV_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda
 )
 
 data_processor.save_kfold_models(models)
