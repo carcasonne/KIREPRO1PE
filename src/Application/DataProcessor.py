@@ -74,6 +74,7 @@ class DataProcessor:
 
     def process_k_fold(
         self,
+        wandb_run,
         model_class,
         dataset: DataLoader,
         k_folds: int,
@@ -102,6 +103,7 @@ class DataProcessor:
             val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=True)
 
             results = self.train_model(
+                wandb_run=wandb_run,
                 model=model,  # pass the new model
                 training_data_loader=train_loader,
                 validation_data_loader=val_loader,
@@ -120,6 +122,7 @@ class DataProcessor:
 
     def train_model(
             self,
+            wandb_run,
             model: CNNClassifier,
             training_data_loader: DataLoader,
             validation_data_loader: DataLoader,
@@ -163,6 +166,7 @@ class DataProcessor:
             all_training_preds = torch.stack(all_training_preds)  # convert lists to tensors
             all_training_labels = torch.stack(all_training_labels)
             training_metrics = self.get_training_metrics(
+                wandb_run,
                 training_loss,
                 all_training_preds,
                 all_training_labels,
@@ -190,6 +194,7 @@ class DataProcessor:
             all_validation_preds = torch.stack(all_validation_preds)
             all_validation_labels = torch.stack(all_validation_labels)
             validation_metrics = self.get_validation_metrics(
+                wandb_run,
                 validation_loss,
                 all_validation_preds,
                 all_validation_labels,
@@ -217,7 +222,7 @@ class DataProcessor:
         return model
 
     def get_training_metrics(
-        self, absolute_loss: float, predicted: torch.Tensor, labels: torch.Tensor, data_size: float
+        self, wandb_run, absolute_loss: float, predicted: torch.Tensor, labels: torch.Tensor, data_size: float
     ) -> EpochMetrics:
         training_metrics = EpochMetrics()
         # move tensors to cpu and convert to numpy
@@ -240,10 +245,13 @@ class DataProcessor:
         training_metrics.add_metric(MetricType.FALSE_POSITIVES, int(fp))
         training_metrics.add_metric(MetricType.FALSE_NEGATIVES, int(fn))
 
+        wandb_run.log({"Train Accuracy": (tp + tn) / data_size,
+                       "Train Loss": absolute_loss / data_size})
+
         return training_metrics
 
     def get_validation_metrics(
-        self, val_loss: float, predicted: torch.Tensor, labels: torch.Tensor, data_size: float
+        self, wandb_run, val_loss: float, predicted: torch.Tensor, labels: torch.Tensor, data_size: float
     ) -> EpochMetrics:
         validation_metrics = EpochMetrics()
         # move tensors to cpu and convert to numpy
@@ -268,4 +276,6 @@ class DataProcessor:
         validation_metrics.add_metric(MetricType.FALSE_POSITIVES, int(fp))
         validation_metrics.add_metric(MetricType.FALSE_NEGATIVES, int(fn))
 
+        wandb_run.log({"Train Accuracy": (tp + tn) / data_size,
+                       "Train Loss": val_loss / data_size})
         return validation_metrics

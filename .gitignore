@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 /audio_files/
 /src/debug_outputs/
+WandB_setup.py
