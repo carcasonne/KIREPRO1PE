@@ -1,0 +1,147 @@
+{
+  "timestamp": "20241213_142254",
+  "config": {
+    "learning_rate": null,
+    "batch_size": 16,
+    "shuffle_batches": true,
+    "epochs": 2,
+    "optimizer": "Adadelta",
+    "k_folds": 2,
+    "model_name": "CNN Classifier from Paper",
+    "hidden_dims": [
+      32
+    ],
+    "activation": "gelu",
+    "sample_rate": 16000,
+    "img_height": 625,
+    "img_width": 469,
+    "channels": 3,
+    "duration": 5,
+    "data_path": "../audio_files_fake_from_paper",
+    "output_path": "../output",
+    "run_cuda": true,
+    "notes": "The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
+    "torch_seed": null,
+    "dropout": 0.1,
+    "weight_decay": 0
+  },
+  "system_info": {
+    "device": "NVIDIA GeForce RTX 3070",
+    "cuda_version": "12.4",
+    "torch_version": "2.5.0+cu124",
+    "ram": "31.1GB",
+    "platform": "Linux-6.12.4-arch1-1-x86_64-with-glibc2.40",
+    "python_version": "3.12.7"
+  },
+  "k_fold_context": {
+    "num_folds": 2,
+    "total_samples": 0,
+    "fold_sizes": {
+      "training": 0,
+      "validation": 0,
+      "testing": 0
+    }
+  },
+  "folds": [
+    {
+      "fold_index": 0,
+      "results": {
+        "training": [
+          {
+            "AVERAGE_LOSS": 0.6101828163084777,
+            "ACCURACY": 0.6956521739130435,
+            "PRECISION": 0.7843137254901961,
+            "F1_SCORE": 0.6956521739130435,
+            "TRUE_POSITIVES": 40,
+            "TRUE_NEGATIVES": 40,
+            "FALSE_POSITIVES": 11,
+            "FALSE_NEGATIVES": 24
+          },
+          {
+            "AVERAGE_LOSS": 0.36666468543850855,
+            "ACCURACY": 0.8347826086956521,
+            "PRECISION": 0.8461538461538461,
+            "F1_SCORE": 0.8527131782945736,
+            "TRUE_POSITIVES": 55,
+            "TRUE_NEGATIVES": 41,
+            "FALSE_POSITIVES": 10,
+            "FALSE_NEGATIVES": 9
+          }
+        ],
+        "validation": [
+          {
+            "AVERAGE_LOSS": 0.6951858111049818,
+            "ACCURACY": 0.5391304347826087,
+            "PRECISION": 0.5391304347826087,
+            "F1_SCORE": 0.7005649717514124,
+            "TRUE_POSITIVES": 62,
+            "TRUE_NEGATIVES": 0,
+            "FALSE_POSITIVES": 53,
+            "FALSE_NEGATIVES": 0
+          },
+          {
+            "AVERAGE_LOSS": 1.2727592514908832,
+            "ACCURACY": 0.5391304347826087,
+            "PRECISION": 0.5391304347826087,
+            "F1_SCORE": 0.7005649717514124,
+            "TRUE_POSITIVES": 62,
+            "TRUE_NEGATIVES": 0,
+            "FALSE_POSITIVES": 53,
+            "FALSE_NEGATIVES": 0
+          }
+        ],
+        "testing": []
+      }
+    },
+    {
+      "fold_index": 1,
+      "results": {
+        "training": [
+          {
+            "AVERAGE_LOSS": 0.5366015641585641,
+            "ACCURACY": 0.7304347826086957,
+            "PRECISION": 0.7313432835820896,
+            "F1_SCORE": 0.7596899224806202,
+            "TRUE_POSITIVES": 49,
+            "TRUE_NEGATIVES": 35,
+            "FALSE_POSITIVES": 18,
+            "FALSE_NEGATIVES": 13
+          },
+          {
+            "AVERAGE_LOSS": 0.37125477739002394,
+            "ACCURACY": 0.8173913043478261,
+            "PRECISION": 0.8596491228070176,
+            "F1_SCORE": 0.8235294117647058,
+            "TRUE_POSITIVES": 49,
+            "TRUE_NEGATIVES": 45,
+            "FALSE_POSITIVES": 8,
+            "FALSE_NEGATIVES": 13
+          }
+        ],
+        "validation": [
+          {
+            "AVERAGE_LOSS": 0.5564975862917693,
+            "ACCURACY": 0.7913043478260869,
+            "PRECISION": 1.0,
+            "F1_SCORE": 0.7692307692307693,
+            "TRUE_POSITIVES": 40,
+            "TRUE_NEGATIVES": 51,
+            "FALSE_POSITIVES": 0,
+            "FALSE_NEGATIVES": 24
+          },
+          {
+            "AVERAGE_LOSS": 1.2374814748764038,
+            "ACCURACY": 0.5565217391304348,
+            "PRECISION": 0.5565217391304348,
+            "F1_SCORE": 0.7150837988826816,
+            "TRUE_POSITIVES": 64,
+            "TRUE_NEGATIVES": 0,
+            "FALSE_POSITIVES": 51,
+            "FALSE_NEGATIVES": 0
+          }
+        ],
+        "testing": []
+      }
+    }
+  ]
+}

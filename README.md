@@ -5,6 +5,7 @@ Research project ITU
 vscode extensions to deal with python:
 - ruff for linting (pylinter is a piece of shit extension)
 
+Built and tested using python version 3.12.7
 
 activate venv
 ```

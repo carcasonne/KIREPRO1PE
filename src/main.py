@@ -2,7 +2,7 @@ from torchvision import transforms
 
 from Application.ClonedAudioDetector import CNNClassifier, SpectrogramAutoencoder
 from Application.DataProcessor import DataProcessor
-from Application.DataSource import DataType, LocalDataSource
+from Application.DataSource import LocalDataSource
 from config import *
 from config import AudioClassifierConfig
 from Core.ResultsDashboardGenerator import ColorScheme, TrainingReporter
@@ -30,11 +30,13 @@ config = AudioClassifierConfig(
     img_height=625,
     img_width=469,
     channels=3,
-    duration=2,
+    duration=5,
     # misc
     notes="The data was trained on the Cloned Audio CNN Classifier defined in the paper: 'Fighting AI with AI: Fake Speech Detection using Deep Learning' by Malik & Changalvala.",
+
     data_path="../ASVspoof2021_DF_eval/flac",
     #data_path="../audio_files_fake_from_paper",
+
     output_path="../output",
     run_cuda=True,
 )
@@ -51,7 +53,9 @@ transform_normalization = transforms.Compose(
 data_source = LocalDataSource(
     config.data_path, config.sample_rate, config.duration, transform_normalization
 )
+
 ASV_data = data_source.get_ASV_dataset(20)
+
 
 # Scuffed but cba fixing
 training_data = None
@@ -79,12 +83,14 @@ reporter = TrainingReporter(
     training_data=training_data,
     validation_data=validation_data,
     testing_data=testing_data,
-    color_scheme=ColorScheme.FRIEREN,
+    color_scheme=ColorScheme.LIGHT,
     base_dir="../training_runs",
 )
 
 results, complete_time, models = data_processor.process_k_fold(
+
     run, CNNClassifier, ASV_data, config.k_folds, config.epochs, config.batch_size, config.run_cuda
+
 )
 #data_processor.save_kfold_models(models)
 

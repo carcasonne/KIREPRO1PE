@@ -1,7 +1,8 @@
-matplotlib
-librosa
-pytorch
-torchvision
-numpy
-scipy
-psutil
+librosa==0.10.2.post1
+matplotlib==3.9.2
+numpy==2.0.2
+psutil==6.1.0
+scipy==1.14.1
+torch==2.5.0
+torchvision==0.20.0
+tqdm==2.2.3
