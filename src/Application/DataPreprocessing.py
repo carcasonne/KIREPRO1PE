@@ -40,14 +40,28 @@ class PreProcesser:
         spec = librosa.stft(audio, win_length=self.window_length, hop_length=self.hop_length)
         return librosa.amplitude_to_db(np.abs(spec), ref=np.max)
 
-    def save_spectrogram(self, file_path, save_path):
+    def save_spectrogram(self, file_path, save_path, log_file="../logs/preprocess"):
         spec = self.convert_to_spectrogram(file_path)
-        np.save((save_path + '.npy'), spec)
+        np.save((save_path + ".npy"), spec)
+
+        file_name = os.path.basename(save_path) + ".npy"
+        with open(log_file, "a") as f:
+            f.write(file_name + "\n")
 
     @staticmethod
     def load_spectrogram(file_path):
         spec = np.load(file_path + '.npy')
         return spec
+
+    @staticmethod
+    def load_folder(file_path):
+        specs = []
+        files = os.listdir(file_path)
+        for file in files:
+            file_path = os.path.join(file_path, file)
+            spec = PreProcesser.load_spectrogram(file_path)
+            specs.append(spec)
+        return specs
 
     def load_keys(self, file_path):
         keys = []
@@ -82,27 +96,33 @@ class PreProcesser:
 
     def asvspoof_process(self, file_path, output_path, class_, convert_all, samples):
         keys = self.load_keys("../keys/" + class_)
-
         audio_file_path = os.path.join(file_path, "flac")
         audio_file_list = os.listdir(audio_file_path)
+        # remove .flac from name
+        file_names = [os.path.splitext(file)[0] for file in audio_file_list]
 
         if convert_all:
-            samples = len(audio_file_list)
+            samples = len(file_names)
 
         for i in range(samples):
             # Extreme performance
-            if audio_file_list[i] in keys:
-                audio_path = os.path.join(audio_file_path, audio_file_list[i], ".flac")
-                save_path = os.path.join(output_path, "ASVSpoof", class_, audio_file_list[i])
+            if file_names[i] in keys:
+                print("Audio file: " + file_names[i] + "is in list")
+                audio_path = os.path.join(audio_file_path, file_names[i]) +".flac"
+                save_path = os.path.join(output_path, class_, file_names[i])
+                save_path = os.path.normpath(save_path)
                 self.save_spectrogram(audio_path, save_path)
-
-
-
 
 
     # Assumes being called inside the ./src folder
     # Kinda cooked but w/e
     def preprocess_dataset(self, dataset, file_path, output_path= "../spectrograms",  convert_all=False, samples=20):
+        os.makedirs("../logs", exist_ok=True)
+
+        # clear log file
+        with open("../logs/preprocess", "w") as f:
+            pass
+
         if dataset == DATASET.FoR:
             os.makedirs(os.path.join(output_path, "FoR", "Training", "Fake"), exist_ok=True)
             os.makedirs(os.path.join(output_path, "FoR", "Training", "Real"), exist_ok=True)
@@ -115,11 +135,11 @@ class PreProcesser:
             self.fake_or_real_process(file_path, output_path + "/FoR", "Training", "Real", convert_all, samples)
 
         if dataset == DATASET.ASVSpoof:
-            os.makedirs(os.path.join(output_path, "ASVSpoof", "Fake"), exist_ok=True)
-            os.makedirs(os.path.join(output_path, "ASVSpoof", "Real"), exist_ok=True)
+            os.makedirs(os.path.join(output_path, "ASVSpoof", "fake"), exist_ok=True)
+            os.makedirs(os.path.join(output_path, "ASVSpoof", "bonafide"), exist_ok=True)
 
-            self.asvspoof_process(file_path, output_path + "/ASVSpoof", "Fake", convert_all, samples)
-            self.asvspoof_process(file_path, output_path + "/ASVSpoof", "Real", convert_all, samples)
+            self.asvspoof_process(file_path, output_path + "/ASVSpoof", "fake", convert_all, samples)
+            self.asvspoof_process(file_path, output_path + "/ASVSpoof", "bonafide", convert_all, samples)
 
 
 
